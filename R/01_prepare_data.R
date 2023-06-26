@@ -18,12 +18,6 @@ hs_isic_df <-
   ungroup() |>
   mutate(k = as.numeric(HS5)) |>
   select(k, isic_2d, share)
-  
-distribution_nb_isic_per_hs <- 
-  hs_isic_df |> 
-  mutate(nb_isic = 1 / share) |>
-  summarize(.by = nb_isic, 
-            nb_hs = n_distinct(k))
 
 # HS - stade
 filen <- paste0("HS", versions$HS, "-stade--share.csv")
@@ -32,18 +26,6 @@ hs_stade_df <-
   read_csv(file) |> 
   mutate(k = as.numeric(HS5)) |>
   select(k, stade, share)
-  
-# BACI aggregated in ISIC_2d, useful to know the number of trade flows 
-baci_in_isic_2d <- 
-  baci_df |>
-  left_join(hs_isic_df, by = c("k")) |>
-  mutate(v = v * share) |>
-  summarize(.by = c(t, i, j, isic_2d),
-            nb_flows = n_distinct(k),
-            v = sum(v)) 
-filen <- paste0("t-i-j-isic_2d--BACI--V", versions$baci_V, ".fst")
-file <- here("data", filen)
-write_fst(baci_in_isic_2d, file, compress = 100)
 
 filen <- paste0("nace_2d--nace_2d_name.csv")
 file <- file.path(paths$nomenclatures_p, "NACE", filen)
@@ -69,17 +51,6 @@ isic_2d_dict <-
   rename(isic_2d = code, 
          isic_2d_name = description)
   
-nb_obs_per_isic_2d <-
-  baci_in_isic_2d |>
-  summarize(.by = isic_2d, 
-            nb_flows = sum(nb_flows),
-            v = sum(v)) |>
-  mutate(across(
-    c(nb_flows, v),
-    ~ .x / sum(.x) * 100,
-    .names = "sh_{.col}")) |>
-  arrange(-nb_flows) |>
-  left_join(isic_2d_dict, by = "isic_2d")
 
 filen <- paste0("t-i-j-isic_2d--BACI--V", versions$baci_V, ".fst")
 file <- here("data", filen)
@@ -99,4 +70,6 @@ isic__isic_for_prices <-
     sh_nb_flows < 1 ~ "NED",
     .default = isic_2d)) |>
   select(isic_2d, isic_2d_aggregated)
+
+rm(nb_obs_per_isic_2d, distribution_nb_isic_per_hs)
   

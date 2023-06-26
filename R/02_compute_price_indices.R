@@ -111,11 +111,16 @@ baci_in_isic_2d <- read_fst(file)
 
 t_stade_price_index_df <- 
   compute_price_index(
-    data = df_with_group_variables, 
+    data = df_with_group_variables,
+    raw_baci_with_group_variables = raw_baci_with_group_variables,
     aggregation_level = t_stade) %>%
   .[["price_df"]] |>
   separate_wider_delim(t_stade, delim = " ", names_sep = "_") |>
   rename(t = t_stade_1, stade = t_stade_2) |>
+  mutate(delta_ln_price_index = case_when(
+    t == 2017 ~ 0, 
+    .default = delta_ln_price_index
+  )) |>
   arrange(stade, t) |>
   group_by(stade) |>
   mutate(cumul_delta_ln_price_index = cumsum(delta_ln_price_index)) |>
@@ -125,6 +130,28 @@ t_stade_price_index_df <-
 filen <- paste0("t-stade--delta_ln_price_index.csv")
 file <- here("data", filen)
 write_csv(t_stade_price_index_df, file)
+
+t_isic2d_price_index_df <- 
+  compute_price_index(
+    data = df_with_group_variables,
+    raw_baci_with_group_variables = raw_baci_with_group_variables,
+    aggregation_level = t_isic) %>%
+  .[["price_df"]] |>
+  separate_wider_delim(t_isic, delim = " ", names_sep = "_") |>
+  rename(t = t_isic_1, isic = t_isic_2) |>
+  mutate(delta_ln_price_index = case_when(
+    t == 2017 ~ 0, 
+    .default = delta_ln_price_index
+  )) |>
+  arrange(isic, t) |>
+  group_by(isic) |>
+  mutate(cumul_delta_ln_price_index = cumsum(delta_ln_price_index)) |>
+  ungroup() |>
+  mutate(price_index = exp(cumul_delta_ln_price_index)) |>
+  select(-cumul_delta_ln_price_index)
+filen <- paste0("t-isic_2d--delta_ln_price_index.csv")
+file <- here("data", filen)
+write_csv(t_isic2d_price_index_df, file)
 
 list_aggregation_level <- c("t", "t_isic", "t_stade")
 names(list_aggregation_level) <- list_aggregation_level
