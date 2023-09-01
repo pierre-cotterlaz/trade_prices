@@ -1,5 +1,8 @@
 
-filen <- paste0("t-stade--delta_ln_price_index.csv")
+filen <- paste0("t-stade--delta_ln_price_index--", 
+                "lb_filter_", lb_percentile_filter,
+                "ub_filter_", ub_percentile_filter, 
+                ".csv")
 file <- here("data", filen)
 stade_data <- 
   read_csv(file) |> 

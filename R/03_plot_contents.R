@@ -1,13 +1,16 @@
 theme_set(theme_bw())
 
-
 # * By stade over time ----------------------------------------------------
 
-
-filen <- paste0("t-stade--delta_ln_price_index.csv")
-file <- here("data", filen)
+filen <- paste0(
+  "t-stade--delta_ln_price_index--", 
+  "lb_filter_", lb_percentile_filter,
+  "ub_filter_", ub_percentile_filter, 
+  ".csv")
+file <- here("data", "intermediary", filen)
 graph_df <- 
   read_csv(file) |> 
+  as_tibble() |>
   group_by(stade) |>
   mutate(
     trade_value_base100 = (v / v[t == 2017]) * 100,
@@ -56,6 +59,77 @@ walk(
 )
 dev.off()
 
+# Compare different methodologies
+
+open_csv <- 
+  function(lb_percentile_filter, ub_percentile_filter){
+    filen <- paste0(
+      "t-stade--delta_ln_price_index--", 
+      "lb_filter_", lb_percentile_filter,
+      "ub_filter_", ub_percentile_filter, 
+      ".csv")
+    file <- here("data", "intermediary", filen)
+    df <- 
+      read_csv(file) |>
+      as_tibble() |>
+      mutate(lb_percentile_filter = lb_percentile_filter,
+             ub_percentile_filter = ub_percentile_filter) 
+    return(df)
+  }
+list_filter_levels <- 
+  tribble(~lb_percentile_filter, ~ub_percentile_filter, 
+         0, 1,
+         0.05, 0.95,)
+
+dict_filter_levels <- 
+  tribble(~lb_percentile_filter, ~ub_percentile_filter, ~level_name,
+          0, 1, "0%",
+          0.05, 0.95, "5%")
+graph_df <-
+  pmap(list_filter_levels, open_csv) |>
+  list_rbind() |>
+  left_join(dict_filter_levels,
+            by = c("lb_percentile_filter", "ub_percentile_filter")) |>
+  group_by(stade, level_name) |>
+  mutate(
+    price_index = price_index * 100,
+    trade_value_base100 = (v / v[t == 2017]) * 100,
+    trade_volume_base100 = trade_value_base100 / price_index) |>
+  ungroup()
+
+stade_select <- "3_PC"
+graph <- 
+  graph_df |> 
+  # filter(stade == stade_select) |>
+  ggplot(aes(x = t, y = price_index, colour = level_name)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 100) +
+  labs(
+    title = stade_select,
+    x = element_blank(),
+    y = "Price index (100 = 2017)"
+  ) +
+  theme(
+    legend.title = element_blank()
+  ) 
+plot(graph)
+
+graph <- 
+  graph_df |> 
+  ggplot(aes(x = t, y = price_index, colour = level_name)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 100) +
+  labs(
+    x = element_blank(),
+    y = "Price index (100 = 2017)"
+  ) +
+  theme(
+    legend.title = element_blank()
+  ) +
+  facet_wrap(vars(stade))
+plot(graph)
 
 # * By ISIC over time -----------------------------------------------------
 
