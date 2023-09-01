@@ -1,9 +1,14 @@
+
+# Read BACI ---------------------------------------------------------------
+
 filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
 file <- file.path(paths$pc_baci_p, "Data", versions$baci_V, filen)
 message(file.info(file)$mtime) 
 baci_df <- 
   read_fst(file) |>
   mutate(uv = v/q)
+
+# Concordance tables ------------------------------------------------------
 
 # HS - ISIC_2d
 filen <- paste0("HS", versions$HS, "-CPA2_1--share.csv")

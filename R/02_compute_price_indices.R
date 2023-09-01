@@ -1,7 +1,11 @@
+# This file is used to compute total trade values
+# It is "raw" as opposed to the "filtered" df used to compute prices
 raw_baci_with_group_variables  <- 
   baci_df |>
   left_join(hs_isic_df, by = "k") |>
-  # NB the dataset will have more rows than defined by t-i-j-k but the total trade flow will remain correct
+  # NB because HS codes may be associated with several ISIC codes
+  # the dataset will have more rows than defined by t-i-j-k but 
+  # the total trade flow will remain correct
   mutate(v = v * share) |>
   select(-share) |>
   left_join(isic__isic_for_prices, by = "isic_2d") |> 
@@ -27,33 +31,28 @@ delta_ln_uv_df <-
   filter(!(is.na(l_uv) | is.na(uv))) |> 
   mutate(delta_ln_uv = log(uv) - log(l_uv))
 
-# Remove outliers 
-# We remove the outliers on a dataset that has the correct t-i-j-k structure
-# not the dataset with group variables which has more rows than t-i-j-k
-remove_outliers <- function(data, lb_percentile_filter, ub_percentile_filter) {
-  filtered_df <- 
-    data |>
-    group_by(t, k) |>
-    filter(between(
-      delta_ln_uv, 
-      quantile(delta_ln_uv, lb_percentile_filter),
-      quantile(delta_ln_uv, ub_percentile_filter))) |>
-    ungroup() 
-  return(filtered_df)
-}
+
+# Remove outliers  --------------------------------------------------------
+
+source(here("R", "02a_functions_compute_price_indices.R"))
+
 lb_percentile_filter <- 0.05
 ub_percentile_filter <- 0.95
 filtered_df <- remove_outliers(
   data = delta_ln_uv_df,
   lb_percentile_filter = lb_percentile_filter,
   ub_percentile_filter = ub_percentile_filter)
+filen <- paste0("filtered_data--lb_perc_", 
+                lb_percentile_filter, 
+                "-ub_perc_", ub_percentile_filter, ".fst")
+file <- here("data", "intermediary", filen)
+write_fst(filtered_df, file, compress = 100)
 
 # Join with ISIC_2d and BEC 
 # Create variables defining the aggregation level 
 df_with_group_variables  <- 
   filtered_df |>
   left_join(hs_isic_df, by = "k") |>
-  # NB the dataset will have more rows than defined by t-i-j-k but the total trade flow will remain correct
   mutate(v = v * share, l_v = l_v * share) |>
   select(-share) |>
   left_join(isic__isic_for_prices, by = "isic_2d") |> 
@@ -63,12 +62,19 @@ df_with_group_variables  <-
   mutate(
     t_k = paste(t, k),
     t_isic = paste(t, isic_2d_aggregated),
-    t_stade = paste(t, stade)
+    t_stade = paste(t, stade),
+    t_isic_stade 
   ) 
+
+
+# Compute price index -----------------------------------------------------
 
 # Weight = share of observation in the cell for which we compute the price index
 
-compute_price_index <- function(data, raw_baci_with_group_variables, aggregation_level){
+compute_price_index <- function(
+    data, 
+    raw_baci_with_group_variables, 
+    aggregation_level){
   aggregation_level_str <- deparse(substitute(aggregation_level))
   price_df <- 
     data |>
