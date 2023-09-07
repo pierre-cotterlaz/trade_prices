@@ -8,6 +8,10 @@ baci_df <-
   read_fst(file) |>
   mutate(uv = v/q)
 
+list_k_in_baci <- 
+  baci_df |>
+  distinct(k)
+
 # Concordance tables ------------------------------------------------------
 
 # HS - ISIC_2d
@@ -30,7 +34,13 @@ file <- file.path(paths$nomenclatures_p, "conversions", filen)
 hs_stade_df <- 
   read_csv(file) |> 
   mutate(k = as.numeric(HS5)) |>
-  select(k, stade, share)
+  select(k, stade, share) |>
+  full_join(list_k_in_baci, by = "k") |> 
+  mutate(stade = case_when(
+    .default = stade, 
+    is.na(stade) ~ "6_NEC"
+  )) |>
+  arrange(k)
 
 filen <- paste0("nace_2d--nace_2d_name.csv")
 file <- file.path(paths$nomenclatures_p, "NACE", filen)
@@ -77,4 +87,6 @@ isic__isic_for_prices <-
   select(isic_2d, isic_2d_aggregated)
 
 rm(nb_obs_per_isic_2d, distribution_nb_isic_per_hs)
+
+
   

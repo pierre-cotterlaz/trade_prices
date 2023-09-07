@@ -1,0 +1,34 @@
+\documentclass[12pt]{article}
+
+\usepackage{amsmath,amsthm}
+\usepackage[french]{babel}
+\usepackage{graphicx}
+\usepackage[utf8]{inputenc}
+\usepackage{setspace}
+\setstretch{1.2}
+\usepackage[top=2cm, bottom=2cm, left=2cm, right=2cm]{geometry}
+
+\title{Documentation for the CEPII trade prices dataset \\
+\small{For internal use only, please do not circulate}}
+\author{Pierre Cotterlaz, Guillaume Gaulier, Aude Sztulman, Deniz Unal}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+On calcule des indices de Törnqvist. Ceux-ci utilisent les variations de valeur unitaire (valeur/quantité) au sein de chaque catégorie de produit. On note $d\ln(UV_{i,j,k,t})$ la variation du logarithme des valeurs unitaires : $d\ln(UV_{i,j,k,t}) = ln(UV_{i,j,k,t}) - ln(UV_{i,j,k,t-1})$. 
+
+On calcule les indices de prix par groupe de produits, un groupe de produits pouvant correspondre à une branche (ISIC 2 chiffres), à un stade de production, ou à l'intersection des deux dimensions. L'indice de prix d'un groupe de produits, $T_{K,t}$, est une moyenne pondérée des variations de valeur unitaire des produits de la branche: 
+
+\begin{equation*}
+    d\ln(T_{K,t}) = \sum_{i,j,k \in K} w_{i,j,k,t} d\ln(UV_{i,j,k,t})
+\end{equation*}
+
+Le poids reflète l'importance du flux au sein des échanges du groupe de produits, c'est une moyenne de la part du flux en $t$ et de sa part en $t-1$. 
+$$w_{i,j,k,t} = \frac{1}{2} \left( \frac{v_{i,j,k,t}}{v_{K,t}} + \frac{v_{i,j,k,t-1}}{v_{K,t-1}}  \right)$$
+
+Au niveau de chaque produit, les variations de valeur unitaire aberrantes sont retirées. On calcule pour chaque produit la distribution des variations de valeurs unitaires et l'on ne conserve que les variations se situant entre le 5e et le 95e centile.
+
+\end{document}
+

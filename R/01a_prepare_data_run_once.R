@@ -25,7 +25,6 @@ distribution_nb_isic_per_hs <-
   summarize(.by = nb_isic, 
             nb_hs = n_distinct(k))
 
-
 # BACI aggregated in ISIC_2d, useful to know the number of trade flows 
 baci_in_isic_2d <- 
   baci_df |>
@@ -49,3 +48,35 @@ nb_obs_per_isic_2d <-
     .names = "sh_{.col}")) |>
   arrange(-nb_flows) |>
   left_join(isic_2d_dict, by = "isic_2d")
+
+#VU au niveau HS 4d 
+`tijk_4d--uv` <- 
+  baci_df |>
+  mutate(uv = v / q) |>
+  select(t, i, j, k, v, uv) |>
+  mutate(k = str_pad(k, 6, side = "left", pad = "0")) |>
+  mutate(k_4d = substr(k, 1, 4)) |>
+  filter(!is.na(v) & !is.na(uv)) |>
+  summarize(
+    .by = c(t, i, j, k_4d), 
+    uv_hs4d = weighted.mean(uv, v, na.rm = TRUE)) 
+
+baci_with_infered_uv <-
+  baci_df |>
+  mutate(uv = v / q) |>
+  mutate(k = str_pad(k, 6, side = "left", pad = "0")) |>
+  mutate(k_4d = substr(k, 1, 4)) |>
+  left_join(`tijk_4d--uv`, by = c("t", "i", "j", "k_4d")) |>
+  arrange(t, i, j, k) |>
+  mutate(infered_uv_fl = case_when(
+    is.na(uv) & !is.na(uv_hs4d) ~ TRUE,
+    .default = FALSE)) |>
+  mutate(uv = case_when(
+    is.na(uv) & !is.na(uv_hs4d) ~ uv_hs4d,
+    .default = FALSE)) |>
+  #select(-uv_hs4d) |>
+  filter(!is.na(uv)) |>
+  select(t, i, j, k, uv)
+filen <- paste0("t-i-j-k--uv--infered_from_k_4d--V", versions$baci_V, ".fst")
+file <- here("data", "intermediary", filen)
+write_fst(baci_with_infered_uv, file, compress = 100)
