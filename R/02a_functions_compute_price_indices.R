@@ -91,12 +91,12 @@ function(lb_percentile_filter,
 # Weight = share of observation in the cell for which we compute the price index
 
 compute_price_index <- function(
-    data, 
+    df_with_group_variables, 
     raw_baci_with_group_variables, 
     aggregation_level){
   aggregation_level_str <- deparse(substitute(aggregation_level))
   price_df <- 
-    data |>
+    df_with_group_variables |>
     group_by({{ aggregation_level }}) |>
     mutate(weight = 1/2 * (v / sum(v) + l_v / sum(l_v))) |>
     summarize(
@@ -113,3 +113,143 @@ compute_price_index <- function(
     full_join(trade_value_df, by = aggregation_level_str)
   return(list(price_df = price_df, aggregation_level_str = aggregation_level_str))
 }
+
+save_csv_files_price_index <- 
+  function(lb_percentile_filter, 
+           ub_percentile_filter,
+           weighted,
+           infer_missing_uv) {
+    filen <- paste0(
+      "filtered_data--", 
+      "lb_perc_", lb_percentile_filter, 
+      "-ub_perc_", ub_percentile_filter,
+      "-weighted_", weighted,
+      "-infer_missing_uv_", infer_missing_uv, ".fst"
+    )
+    file <- here("data", "intermediary", filen)
+    df_with_group_variables  <- 
+      read_fst(file) |>
+      mutate(k = as.numeric(k)) |>
+      left_join(hs_isic_df, by = "k") |>
+      mutate(v = v * share, l_v = l_v * share) |>
+      select(-share) |>
+      left_join(isic__isic_for_prices, by = "isic_2d") |> 
+      left_join(hs_stade_df, by = "k") |>
+      mutate(v = v * share, l_v = l_v * share) |>
+      select(-share) |>
+      mutate(
+        t_k = paste(t, k),
+        t_isic = paste(t, isic_2d_aggregated),
+        t_stade = paste(t, stade),
+        t_isic_stade = paste(t, isic_2d_aggregated, stade)
+      ) 
+    
+    # t level 
+    t_price_index_df <- 
+      compute_price_index(
+        df_with_group_variables = df_with_group_variables,
+        raw_baci_with_group_variables = raw_baci_with_group_variables,
+        aggregation_level = t) %>%
+      .[["price_df"]] |>
+      mutate(delta_ln_price_index = case_when(
+        t == first_year ~ 0, 
+        .default = delta_ln_price_index
+      )) |>
+      arrange(t) |>
+      mutate(cumul_delta_ln_price_index = cumsum(delta_ln_price_index)) |>
+      mutate(price_index = exp(cumul_delta_ln_price_index)) 
+    filen <- paste0(
+      "t--delta_ln_price_index--", 
+      "lb_perc_", lb_percentile_filter, 
+      "-ub_perc_", ub_percentile_filter,
+      "-weighted_", weighted_select,
+      "-infer_missing_uv_", infer_missing_uv_select, ".csv")
+    file <- here("data", "intermediary", filen)
+    write_csv(t_price_index_df, file)
+    
+    # By t-stade
+    t_stade_price_index_df <- 
+      compute_price_index(
+        df_with_group_variables = df_with_group_variables,
+        raw_baci_with_group_variables = raw_baci_with_group_variables,
+        aggregation_level = t_stade) %>%
+      .[["price_df"]] |>
+      separate_wider_delim(t_stade, delim = " ", names_sep = "_") |>
+      rename(t = t_stade_1, stade = t_stade_2) |>
+      mutate(delta_ln_price_index = case_when(
+        t == first_year ~ 0, 
+        .default = delta_ln_price_index
+      )) |>
+      arrange(stade, t) |>
+      group_by(stade) |>
+      mutate(cumul_delta_ln_price_index = cumsum(delta_ln_price_index)) |>
+      ungroup() |>
+      mutate(price_index = exp(cumul_delta_ln_price_index)) |>
+      select(-cumul_delta_ln_price_index)
+    filen <- paste0(
+      "t-stade--delta_ln_price_index--", 
+      "lb_perc_", lb_percentile_filter, 
+      "-ub_perc_", ub_percentile_filter,
+      "-weighted_", weighted_select,
+      "-infer_missing_uv_", infer_missing_uv_select, ".csv")
+    file <- here("data", "intermediary", filen)
+    write_csv(t_stade_price_index_df, file)
+    
+    # By t-ISIC
+    t_isic2d_price_index_df <- 
+      compute_price_index(
+        df_with_group_variables = df_with_group_variables,
+        raw_baci_with_group_variables = raw_baci_with_group_variables,
+        aggregation_level = t_isic) %>%
+      .[["price_df"]] |>
+      separate_wider_delim(t_isic, delim = " ", names_sep = "_") |>
+      rename(t = t_isic_1, isic = t_isic_2) |>
+      mutate(delta_ln_price_index = case_when(
+        t == first_year ~ 0, 
+        .default = delta_ln_price_index
+      )) |>
+      arrange(isic, t) |>
+      group_by(isic) |>
+      mutate(cumul_delta_ln_price_index = cumsum(delta_ln_price_index)) |>
+      ungroup() |>
+      mutate(price_index = exp(cumul_delta_ln_price_index)) |>
+      select(-cumul_delta_ln_price_index)
+    filen <- paste0(
+      "t-isic_2d--delta_ln_price_index--", 
+      "lb_perc_", lb_percentile_filter, 
+      "-ub_perc_", ub_percentile_filter,
+      "-weighted_", weighted_select,
+      "-infer_missing_uv_", infer_missing_uv_select, ".csv")
+    file <- here("data", "intermediary", filen)
+    write_csv(t_isic2d_price_index_df, file)
+    
+    # By t-ISIC-stade
+    t_isic2d_stade_price_index_df <- 
+      compute_price_index(
+        df_with_group_variables = df_with_group_variables,
+        raw_baci_with_group_variables = raw_baci_with_group_variables,
+        aggregation_level = t_isic_stade) %>%
+      .[["price_df"]] |>
+      separate_wider_delim(t_isic_stade, delim = " ", names_sep = "_") |>
+      rename(t = t_isic_stade_1, isic = t_isic_stade_2, stade = t_isic_stade_3) |>
+      mutate(delta_ln_price_index = case_when(
+        t == first_year ~ 0, 
+        .default = delta_ln_price_index
+      )) |>
+      arrange(isic, stade, t) |>
+      group_by(isic, stade) |>
+      mutate(cumul_delta_ln_price_index = cumsum(delta_ln_price_index)) |>
+      ungroup() |>
+      mutate(price_index = exp(cumul_delta_ln_price_index)) |>
+      select(-cumul_delta_ln_price_index)
+    filen <- paste0(
+      "t-isic_2d-stade--delta_ln_price_index--", 
+      "lb_perc_", lb_percentile_filter, 
+      "-ub_perc_", ub_percentile_filter,
+      "-weighted_", weighted_select,
+      "-infer_missing_uv_", infer_missing_uv_select, ".csv")
+    file <- here("data", "intermediary", filen)
+    write_csv(t_isic2d_stade_price_index_df, file)
+    
+  }
+  

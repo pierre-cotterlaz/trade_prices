@@ -48,4 +48,5 @@ versions <- list(
 library(callr)
 library(here)
 
+source(here("R", "01_prepare_data.R"))
 source(here("R", "02a_functions_compute_price_indices.R"))

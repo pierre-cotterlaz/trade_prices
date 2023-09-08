@@ -2,36 +2,38 @@ theme_set(theme_bw())
 
 # * Lists of possible methodologies ---------------------------------------
 
-list_filter_levels <- 
-  tribble(~lb_percentile_filter, ~ub_percentile_filter, ~weighted,
-          0, 1, FALSE,
-          0.05, 0.95, FALSE,
-          0.05, 0.95, TRUE)
+list_methods <- 
+  tribble(~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~infer_missing_uv,
+          0, 1, FALSE, FALSE,
+          0.05, 0.95, FALSE, FALSE, 
+          0.05, 0.95, TRUE, FALSE,
+          0.05, 0.95, FALSE, TRUE)
 
-dict_filter_levels <- 
-  tribble(~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~method_name,
-          0, 1, FALSE, "No filtering",
-          0.05, 0.95, FALSE, "5%, unweighted",
-          0.05, 0.95, TRUE, "5%, weighted")
-
+dict_method_names <- 
+  tribble(~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~infer_missing_uv, ~method_name,
+          0, 1, FALSE, FALSE, "No filtering",
+          0.05, 0.95, FALSE, FALSE, "5%, unweighted",
+          0.05, 0.95, TRUE, FALSE, "5%, weighted",
+          0.05, 0.95, FALSE, TRUE, "5%, unweighted, infer missing uv")
 
 # * Over time -------------------------------------------------------------
 
-
 open_csv <- 
-  function(lb_percentile_filter, ub_percentile_filter, weighted){
+  function(lb_percentile_filter, ub_percentile_filter, weighted, infer_missing_uv){
     filen <- paste0(
       "t--delta_ln_price_index--", 
-      "weighted_", weighted,
-      "-lb_perc_", lb_percentile_filter, 
-      "-ub_perc_", ub_percentile_filter, ".csv")
+      "lb_perc_", lb_percentile_filter, 
+      "-ub_perc_", ub_percentile_filter,
+      "-weighted_", weighted,
+      "-infer_missing_uv_", infer_missing_uv, ".csv")
     file <- here("data", "intermediary", filen)
     df <- 
       read_csv(file) |>
       as_tibble() |>
       mutate(lb_percentile_filter = lb_percentile_filter,
              ub_percentile_filter = ub_percentile_filter,
-             weighted = weighted) 
+             weighted = weighted,
+             infer_missing_uv = infer_missing_uv) 
     return(df)
   }
 
