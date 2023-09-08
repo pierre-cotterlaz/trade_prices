@@ -2,8 +2,9 @@ filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
 file <- file.path(paths$pc_baci_p, "Data", versions$baci_V, filen)
 message(file.info(file)$mtime) 
 baci_df <- 
-  read_fst(file) |>
-  mutate(uv = v/q)
+  read_fst(file) 
+# |>
+  # mutate(uv = v/q)
 
 # HS - ISIC_2d
 filen <- paste0("HS", versions$HS, "-CPA2_1--share.csv")
@@ -73,10 +74,17 @@ baci_with_infered_uv <-
     .default = FALSE)) |>
   mutate(uv = case_when(
     is.na(uv) & !is.na(uv_hs4d) ~ uv_hs4d,
-    .default = FALSE)) |>
+    .default = uv)) |>
   #select(-uv_hs4d) |>
   filter(!is.na(uv)) |>
-  select(t, i, j, k, uv)
+  select(t, i, j, k, uv, v, infered_uv_fl)
 filen <- paste0("t-i-j-k--uv--infered_from_k_4d--V", versions$baci_V, ".fst")
 file <- here("data", "intermediary", filen)
 write_fst(baci_with_infered_uv, file, compress = 100)
+
+filen <- paste0("t-i-j-k--uv--infered_from_k_4d--V", versions$baci_V, ".fst")
+file <- here("data", "intermediary", filen)
+tmp <-
+  read_fst(file) |>
+  summarize(.by = c(t, infered_uv_fl),
+            nb_ijk = n_distinct(i, j, k))

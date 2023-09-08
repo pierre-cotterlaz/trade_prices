@@ -1,68 +1,67 @@
 
-filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
-file <- file.path(paths$pc_baci_p, "Data", versions$baci_V, filen)
-message(file.info(file)$mtime) 
-baci_df <- 
-  read_fst(file) |>
-  mutate(uv = v/q)
 
-lagged_baci_df <- 
-  baci_df |>
-  mutate(t = t + 1) |>
-  select(t, i, j, k, v, uv) |>
-  rename(l_v = v, l_uv = uv)
-
-delta_ln_uv_df <- 
-  baci_df |>
-  left_join(lagged_baci_df, by = c("t", "i", "j", "k")) |> 
-  # Drop if uv missing in t or t-1 since we cannot compute a time variation in this case
-  filter(!(is.na(l_uv) | is.na(uv))) |> 
-  mutate(delta_ln_uv = log(uv) - log(l_uv))
+# delta_ln_uv_df <- 
+#   create_delta_ln_uv_data(infer_missing_uv = TRUE)
 
 # Remove outliers  --------------------------------------------------------
+
+list_arguments <- 
+  tribble(~lb_percentile_filter, ~ub_percentile_filter, ~weighted, infer_missing_uv,
+          0, 1, FALSE, FALSE,
+          0.05, 0.95, FALSE, FALSE,
+          0.05, 0.95, TRUE, FALSE)
 
 lb_percentile_filter <- 0.05
 ub_percentile_filter <- 0.95
 weighted_select <- FALSE
+infer_missing_uv_select <- TRUE
 filtered_df <- remove_outliers(
-  data = delta_ln_uv_df,
   weighted = weighted_select,
   lb_percentile_filter = lb_percentile_filter,
-  ub_percentile_filter = ub_percentile_filter)
+  ub_percentile_filter = ub_percentile_filter,
+  infer_missing_uv = infer_missing_uv_select,
+  save_dataset = FALSE)
 filen <- paste0("filtered_data--", 
-                "weighted_", weighted_select,
-                "-lb_perc_", lb_percentile_filter, 
-                "-ub_perc_", ub_percentile_filter, ".fst")
+                "lb_perc_", lb_percentile_filter, 
+                "-ub_perc_", ub_percentile_filter,
+                "-weighted_", weighted_select,
+                "-infer_missing_uv_", infer_missing_uv_select, ".fst")
 file <- here("data", "intermediary", filen)
 write_fst(filtered_df, file, compress = 100)
 
 lb_percentile_filter <- 0
 ub_percentile_filter <- 1
 weighted_select <- FALSE
+infer_missing_uv_select <- FALSE
 filtered_df <- remove_outliers(
-  data = delta_ln_uv_df,
   weighted = weighted_select,
   lb_percentile_filter = lb_percentile_filter,
-  ub_percentile_filter = ub_percentile_filter)
+  ub_percentile_filter = ub_percentile_filter,
+  infer_missing_uv = infer_missing_uv_select,
+  save_dataset = FALSE)
 filen <- paste0("filtered_data--", 
-                "weighted_", weighted_select,
-                "-lb_perc_", lb_percentile_filter, 
-                "-ub_perc_", ub_percentile_filter, ".fst")
+                "lb_perc_", lb_percentile_filter, 
+                "-ub_perc_", ub_percentile_filter,
+                "-weighted_", weighted_select,
+                "-infer_missing_uv_", infer_missing_uv_select, ".fst")
 file <- here("data", "intermediary", filen)
 write_fst(filtered_df, file, compress = 100)
 
 lb_percentile_filter <- 0.05
 ub_percentile_filter <- 0.95
-weighted_select <- TRUE
+weighted_select <- FALSE
+infer_missing_uv_select <- FALSE
 filtered_df <- remove_outliers(
-  data = delta_ln_uv_df,
   weighted = weighted_select,
   lb_percentile_filter = lb_percentile_filter,
-  ub_percentile_filter = ub_percentile_filter)
+  ub_percentile_filter = ub_percentile_filter,
+  infer_missing_uv = infer_missing_uv_select,
+  save_dataset = FALSE)
 filen <- paste0("filtered_data--", 
-                "weighted_", weighted_select,
-                "-lb_perc_", lb_percentile_filter, 
-                "-ub_perc_", ub_percentile_filter, ".fst")
+                "lb_perc_", lb_percentile_filter, 
+                "-ub_perc_", ub_percentile_filter,
+                "-weighted_", weighted_select,
+                "-infer_missing_uv_", infer_missing_uv_select, ".fst")
 file <- here("data", "intermediary", filen)
 write_fst(filtered_df, file, compress = 100)
 

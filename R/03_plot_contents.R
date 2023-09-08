@@ -75,24 +75,28 @@ ggsave(
 
 # List of stades, to loop over
 list_stades <- 
-  graph_df |>
+  hs_stade_df |>
   distinct(stade) |>
+  arrange(stade) |>
   pull()
 names(list_stades) <- list_stades
 
+lb_percentile_filter <- 0.05
+ub_percentile_filter <- 0.95
+weighted <- FALSE
 # Intermediary dataset from 02_compute_price_indices
 filen <- paste0(
   "t-stade--delta_ln_price_index--", 
-  "lb_filter_", lb_percentile_filter,
-  "ub_filter_", ub_percentile_filter, 
-  ".csv")
+  "weighted_", weighted,
+  "-lb_perc_", lb_percentile_filter, 
+  "-ub_perc_", ub_percentile_filter, ".csv")
 file <- here("data", "intermediary", filen)
 graph_df <- 
   read_csv(file) |> 
   as_tibble() |>
   group_by(stade) |>
   mutate(
-    trade_value_base100 = (v / v[t == 2017]) * 100,
+    trade_value_base100 = (v / v[t == first_year]) * 100,
     trade_volume_base100 = trade_value_base100 / price_index) |>
   ungroup()
 
@@ -100,7 +104,9 @@ make_graph_stade <- function(stade_select){
   graph <- 
     graph_df |>
     select(t, stade, starts_with("trade")) |>
-    pivot_longer(cols = starts_with("trade"), names_to = "type", values_to = "trade") |>
+    pivot_longer(cols = starts_with("trade"), 
+                 names_to = "type", 
+                 values_to = "trade") |>
     filter(stade == stade_select) |>
     ggplot(aes(x = t, y = trade, colour = type)) +
     geom_line() +
@@ -135,18 +141,19 @@ dev.off()
 # Compare different methodologies
 
 open_csv <- 
-  function(lb_percentile_filter, ub_percentile_filter){
+  function(lb_percentile_filter, ub_percentile_filter, weighted){
     filen <- paste0(
       "t-stade--delta_ln_price_index--", 
-      "lb_filter_", lb_percentile_filter,
-      "ub_filter_", ub_percentile_filter, 
-      ".csv")
+      "weighted_", weighted,
+      "-lb_perc_", lb_percentile_filter, 
+      "-ub_perc_", ub_percentile_filter, ".csv")
     file <- here("data", "intermediary", filen)
     df <- 
       read_csv(file) |>
       as_tibble() |>
       mutate(lb_percentile_filter = lb_percentile_filter,
-             ub_percentile_filter = ub_percentile_filter) 
+             ub_percentile_filter = ub_percentile_filter,
+             weighted = weighted) 
     return(df)
   }
 
@@ -154,8 +161,8 @@ graph_df <-
   pmap(list_filter_levels, open_csv) |>
   list_rbind() |>
   left_join(dict_filter_levels,
-            by = c("lb_percentile_filter", "ub_percentile_filter")) |>
-  group_by(stade, level_name) |>
+            by = c("lb_percentile_filter", "ub_percentile_filter", "weighted")) |>
+  group_by(stade, method_name) |>
   mutate(
     price_index = price_index * 100,
     trade_value_base100 = (v / v[t == 2017]) * 100,
@@ -166,7 +173,7 @@ make_graph_stade <- function(stade_select){
   graph <- 
     graph_df |> 
     filter(stade == stade_select) |>
-    ggplot(aes(x = t, y = price_index, colour = level_name)) +
+    ggplot(aes(x = t, y = price_index, colour = method_name)) +
     geom_line() +
     geom_point() +
     geom_hline(yintercept = 100) +

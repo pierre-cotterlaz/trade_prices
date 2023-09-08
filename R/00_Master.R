@@ -7,10 +7,6 @@ library(tidyverse)
 # * Define paths ----------------------------------------------------------
 
 
-wd <- getwd()
-if (grepl("D:", wd) == T) {
-  location <- "pc"
-}
 
 define_paths <- function(location) {
   if (location == "pc") {
@@ -31,10 +27,14 @@ define_paths <- function(location) {
 }
 
 wd <- getwd()
-if (grepl("dell5820108", wd) == T) {
+if (grepl("D:", wd) == T) {
+  location <- "pc"
+}
+if (grepl("dell5820108", wd) == TRUE) {
   location <- "baci8"
 }
 paths <- define_paths(location)
+rm(wd)
 
 # * Parameters ------------------------------------------------------------
 
