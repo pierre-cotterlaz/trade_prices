@@ -162,8 +162,8 @@ save_csv_files_price_index <-
       "t--delta_ln_price_index--", 
       "lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
-      "-weighted_", weighted_select,
-      "-infer_missing_uv_", infer_missing_uv_select, ".csv")
+      "-weighted_", weighted,
+      "-infer_missing_uv_", infer_missing_uv, ".csv")
     file <- here("data", "intermediary", filen)
     write_csv(t_price_index_df, file)
     
@@ -190,8 +190,8 @@ save_csv_files_price_index <-
       "t-stade--delta_ln_price_index--", 
       "lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
-      "-weighted_", weighted_select,
-      "-infer_missing_uv_", infer_missing_uv_select, ".csv")
+      "-weighted_", weighted,
+      "-infer_missing_uv_", infer_missing_uv, ".csv")
     file <- here("data", "intermediary", filen)
     write_csv(t_stade_price_index_df, file)
     
@@ -218,8 +218,8 @@ save_csv_files_price_index <-
       "t-isic_2d--delta_ln_price_index--", 
       "lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
-      "-weighted_", weighted_select,
-      "-infer_missing_uv_", infer_missing_uv_select, ".csv")
+      "-weighted_", weighted,
+      "-infer_missing_uv_", infer_missing_uv, ".csv")
     file <- here("data", "intermediary", filen)
     write_csv(t_isic2d_price_index_df, file)
     
@@ -246,8 +246,8 @@ save_csv_files_price_index <-
       "t-isic_2d-stade--delta_ln_price_index--", 
       "lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
-      "-weighted_", weighted_select,
-      "-infer_missing_uv_", infer_missing_uv_select, ".csv")
+      "-weighted_", weighted,
+      "-infer_missing_uv_", infer_missing_uv, ".csv")
     file <- here("data", "intermediary", filen)
     write_csv(t_isic2d_stade_price_index_df, file)
     

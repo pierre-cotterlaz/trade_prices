@@ -30,5 +30,14 @@ $$w_{i,j,k,t} = \frac{1}{2} \left( \frac{v_{i,j,k,t}}{v_{K,t}} + \frac{v_{i,j,k,
 
 Au niveau de chaque produit, les variations de valeur unitaire aberrantes sont retirées. On calcule pour chaque produit la distribution des variations de valeurs unitaires et l'on ne conserve que les variations se situant entre le 5e et le 95e centile.
 
+On présente 4 méthodes : 
+
+\begin{enumerate}
+\item Pas de retrait des valeurs aberrantes.
+\item Retrait des valeurs aberrantes sur la base d'un filtrage non pondéré (5\% des observations).
+\item Retrait des valeurs aberrantes sur la base d'un filtrage pondéré (5\% du $w$).
+\item Remplacement des $d\ln(UV_{i,j,k,t})$ par leur moyenne au niveau HS 4 chiffres, $i,j,t$, avec filtrage non pondéré. 
+\end{enumerate}
+
 \end{document}
 
