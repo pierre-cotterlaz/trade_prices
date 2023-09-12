@@ -5,83 +5,31 @@
 
 # Remove outliers  --------------------------------------------------------
 
+lb_percentile_filter <- 0.05
+ub_percentile_filter <- 0.95
+weighted_select <- FALSE
+infer_missing_uv_select <- FALSE
+filtered_df <- 
+  remove_outliers(
+    lb_percentile_filter = lb_percentile_filter,
+    ub_percentile_filter = ub_percentile_filter,
+    weighted = weighted_select,
+    replace_outliers = TRUE, 
+    infer_missing_uv_before = infer_missing_uv_select,
+    infer_missing_uv_after = FALSE,
+    save_dataset = FALSE
+  )
+
 list_arguments <- 
-  tribble(~lb_percentile_filter, ~ub_percentile_filter, ~weighted, infer_missing_uv,
-          0, 1, FALSE, FALSE,
-          0.05, 0.95, FALSE, FALSE,
-          0.05, 0.95, TRUE, FALSE)
+  tribble(
+    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
+    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE, 
+    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE, 
+    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE, 
+    0.05                 , 0.95                 , FALSE    , TRUE             , TRUE                    , FALSE
+  )
 
-lb_percentile_filter <- 0.05
-ub_percentile_filter <- 0.95
-weighted_select <- FALSE
-infer_missing_uv_select <- TRUE
-filtered_df <- remove_outliers(
-  weighted = weighted_select,
-  lb_percentile_filter = lb_percentile_filter,
-  ub_percentile_filter = ub_percentile_filter,
-  infer_missing_uv = infer_missing_uv_select,
-  save_dataset = FALSE)
-filen <- paste0("filtered_data--", 
-                "lb_perc_", lb_percentile_filter, 
-                "-ub_perc_", ub_percentile_filter,
-                "-weighted_", weighted_select,
-                "-infer_missing_uv_", infer_missing_uv_select, ".fst")
-file <- here("data", "intermediary", filen)
-write_fst(filtered_df, file, compress = 100)
-
-lb_percentile_filter <- 0
-ub_percentile_filter <- 1
-weighted_select <- FALSE
-infer_missing_uv_select <- FALSE
-filtered_df <- remove_outliers(
-  weighted = weighted_select,
-  lb_percentile_filter = lb_percentile_filter,
-  ub_percentile_filter = ub_percentile_filter,
-  infer_missing_uv = infer_missing_uv_select,
-  save_dataset = FALSE)
-filen <- paste0("filtered_data--", 
-                "lb_perc_", lb_percentile_filter, 
-                "-ub_perc_", ub_percentile_filter,
-                "-weighted_", weighted_select,
-                "-infer_missing_uv_", infer_missing_uv_select, ".fst")
-file <- here("data", "intermediary", filen)
-write_fst(filtered_df, file, compress = 100)
-
-lb_percentile_filter <- 0.05
-ub_percentile_filter <- 0.95
-weighted_select <- FALSE
-infer_missing_uv_select <- FALSE
-filtered_df <- remove_outliers(
-  weighted = weighted_select,
-  lb_percentile_filter = lb_percentile_filter,
-  ub_percentile_filter = ub_percentile_filter,
-  infer_missing_uv = infer_missing_uv_select,
-  save_dataset = FALSE)
-filen <- paste0("filtered_data--", 
-                "lb_perc_", lb_percentile_filter, 
-                "-ub_perc_", ub_percentile_filter,
-                "-weighted_", weighted_select,
-                "-infer_missing_uv_", infer_missing_uv_select, ".fst")
-file <- here("data", "intermediary", filen)
-write_fst(filtered_df, file, compress = 100)
-
-lb_percentile_filter <- 0.05
-ub_percentile_filter <- 0.95
-weighted_select <- TRUE
-infer_missing_uv_select <- FALSE
-filtered_df <- remove_outliers(
-  weighted = weighted_select,
-  lb_percentile_filter = lb_percentile_filter,
-  ub_percentile_filter = ub_percentile_filter,
-  infer_missing_uv = infer_missing_uv_select,
-  save_dataset = FALSE)
-filen <- paste0("filtered_data--", 
-                "lb_perc_", lb_percentile_filter, 
-                "-ub_perc_", ub_percentile_filter,
-                "-weighted_", weighted_select,
-                "-infer_missing_uv_", infer_missing_uv_select, ".fst")
-file <- here("data", "intermediary", filen)
-write_fst(filtered_df, file, compress = 100)
+pwalk(list_arguments, remove_outliers)
 
 rm(delta_ln_uv_df, baci_df, lagged_baci_df)
 
@@ -113,39 +61,6 @@ raw_baci_with_group_variables  <-
     t_isic_stade = paste(t, isic_2d_aggregated, stade)
   ) 
 
-# lb_percentile_filter <- 0.05
-# ub_percentile_filter <- 0.95
-# weighted_select <- FALSE
-# infer_missing_uv_select <- FALSE
-# filen <- paste0("filtered_data--", 
-#                 "lb_perc_", lb_percentile_filter, 
-#                 "-ub_perc_", ub_percentile_filter,
-#                 "-weighted_", weighted_select,
-#                 "-infer_missing_uv_", infer_missing_uv_select, ".fst")
-# file <- here("data", "intermediary", filen)
-# # filtered_df <- 
-# #   read_fst(file)
-# 
-# # Join with ISIC_2d and BEC 
-# # Create variables defining the aggregation level 
-# df_with_group_variables  <- 
-#   read_fst(file) |>
-#   mutate(k = as.numeric(k)) |>
-#   left_join(hs_isic_df, by = "k") |>
-#   mutate(v = v * share, l_v = l_v * share) |>
-#   select(-share) |>
-#   left_join(isic__isic_for_prices, by = "isic_2d") |> 
-#   left_join(hs_stade_df, by = "k") |>
-#   mutate(v = v * share, l_v = l_v * share) |>
-#   select(-share) |>
-#   mutate(
-#     t_k = paste(t, k),
-#     t_isic = paste(t, isic_2d_aggregated),
-#     t_stade = paste(t, stade),
-#     t_isic_stade = paste(t, isic_2d_aggregated, stade)
-#   ) 
-# rm(filtered_df)
-
 # Compute price index -----------------------------------------------------
 
 first_year <- 2017
@@ -160,18 +75,21 @@ save_csv_files_price_index(
   ub_percentile_filter = ub_percentile_filter,
   infer_missing_uv = infer_missing_uv_select)
 
-list_arguments <- 
-  tribble(~lb_percentile_filter, ~ub_percentile_filter, ~weighted, infer_missing_uv,
-          0, 1, FALSE, FALSE,
-          0.05, 0.95, FALSE, FALSE,
-          0.05, 0.95, TRUE, FALSE)
+list_methods <-  
+  tribble(
+    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
+    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE, 
+    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE, 
+    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE, 
+    0.05                 , 0.95                 , FALSE    , TRUE             , TRUE                    , FALSE
+  )
 
-list_methods <- 
-  tribble(~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~infer_missing_uv,
-          0, 1, FALSE, FALSE,
-          0.05, 0.95, FALSE, FALSE, 
-          0.05, 0.95, TRUE, FALSE,
-          0.05, 0.95, FALSE, TRUE)
+# list_methods <- 
+#   tribble(~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~infer_missing_uv,
+#           0, 1, FALSE, FALSE,
+#           0.05, 0.95, FALSE, FALSE, 
+#           0.05, 0.95, TRUE, FALSE,
+#           0.05, 0.95, FALSE, TRUE)
 pwalk(list_methods, save_csv_files_price_index)
 
 

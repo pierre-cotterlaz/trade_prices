@@ -1,10 +1,46 @@
 
+replace_missing_delta_ln_uv <- function(infer_missing_uv_after){
+  if (infer_missing_uv_after == TRUE) {
+    
+    filen <- paste0("t-i-j-k--aggregated_delta_ln_uv--V", versions$baci_V, ".fst")
+    file <- here("data", "intermediary", filen)
+    aggregated_delta_ln_uv_df <-
+      read_fst(file) |>
+      select(-k_4d, -delta_ln_uv) |>
+      mutate(k = as.numeric(k))
+    
+    # BACI is used to obtain all t-i-j-k with positive trade flows
+    filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
+    file <- file.path(paths$pc_baci_p, "Data", versions$baci_V, filen)
+    baci_df <- 
+      read_fst(file) |>
+      select(t, i, j, k)
+    
+    
+    missing_uv_replaced_df <-
+      baci_df |>
+      left_join(filtered_df, by = c("t", "i", "j", "k")) |>
+      left_join(aggregated_delta_ln_uv_df, by = c("t", "i", "j", "k"))
+    |>
+      mutate(delta_ln_uv = case_when( 
+        is.na(delta_ln_uv) & !is.na(d_ln_uv__t_i_j_k_4d) ~ d_ln_uv__t_i_j_k_4d,
+        is.na(delta_ln_uv) & !is.na(d_ln_uv__t_i_k_4d) ~ d_ln_uv__t_i_k_4d,
+        .default = delta_ln_uv
+              ))
+    
+    tmp <- 
+      missing_uv_replaced_df |>
+      filter(is.na(delta_ln_uv & !is.na(d_ln_uv__t_i_j_k_4d)))
+  }
+}
+filen <- paste0("t-i-j-k--aggregated_delta_ln_uv--V", versions$baci_V, ".fst")
+file <- here("data", "intermediary", filen)
+
 #
 create_delta_ln_uv_data <- function(infer_missing_uv){
   if (infer_missing_uv == FALSE){
     filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
     file <- file.path(paths$pc_baci_p, "Data", versions$baci_V, filen)
-    message(file.info(file)$mtime) 
     baci_df <- 
       read_fst(file) |>
       mutate(uv = v/q)
@@ -39,18 +75,41 @@ remove_outliers <-
 function(lb_percentile_filter, 
          ub_percentile_filter,
          weighted,
-         infer_missing_uv,
-         save_dataset) {
-  delta_ln_uv_df <- create_delta_ln_uv_data(infer_missing_uv) 
+         replace_outliers,
+         infer_missing_uv_before,
+         infer_missing_uv_after) {
+  message("lb_percentile_filter: ", lb_percentile_filter, 
+          ", ub_percentile_filter: ", ub_percentile_filter)
+
+  delta_ln_uv_df <- create_delta_ln_uv_data(infer_missing_uv = infer_missing_uv_before) 
+  
   if (weighted == FALSE){
     filtered_df <- 
       delta_ln_uv_df |>
       group_by(t, k) |>
-      filter(between(
+      mutate(outlier = !between(
         delta_ln_uv, 
         quantile(delta_ln_uv, lb_percentile_filter),
         quantile(delta_ln_uv, ub_percentile_filter))) |>
-      ungroup() 
+      ungroup()
+    if (replace_outliers == TRUE) {
+      filtered_df <- 
+        filtered_df |>
+        group_by(t, k) |>
+        mutate(delta_ln_uv = case_when(
+          (delta_ln_uv < quantile(delta_ln_uv, lb_percentile_filter)) 
+          ~ quantile(delta_ln_uv, lb_percentile_filter),
+          (delta_ln_uv > quantile(delta_ln_uv, ub_percentile_filter)) 
+          ~ quantile(delta_ln_uv, ub_percentile_filter),
+          .default = delta_ln_uv
+        )) |>
+        ungroup()
+      }
+    if (replace_outliers == FALSE){
+      filtered_df <- 
+        filtered_df |> 
+        filter(outlier == FALSE)
+    }
   }
   if (weighted == TRUE){
     filtered_df <- 
@@ -73,6 +132,10 @@ function(lb_percentile_filter,
         ub_percentile_filter)) |>
       ungroup() 
   }
+  if (infer_missing_uv_after == TRUE){
+    filtered_df <-
+      filtered_df 
+  }
   filtered_df <- 
     filtered_df |>
     select(t, i, j, k, delta_ln_uv, v, l_v)
@@ -80,11 +143,11 @@ function(lb_percentile_filter,
                   "-lb_perc_", lb_percentile_filter, 
                   "-ub_perc_", ub_percentile_filter,
                   "-weighted_", weighted,
-                  "-infer_missing_uv_", infer_missing_uv, ".fst")
+                  "-replace_outliers_", replace_outliers, 
+                  "-infer_missing_uv_before_", infer_missing_uv_before, 
+                  "-infer_missing_uv_after_", infer_missing_uv_after, ".fst")
   file <- here("data", "intermediary", filen)
-  if (save_dataset == TRUE){
-    write_fst(filtered_df, file, compress = 100)
-  }
+  write_fst(filtered_df, file, compress = 100)
   return(filtered_df)
 }
 
@@ -118,14 +181,18 @@ save_csv_files_price_index <-
   function(lb_percentile_filter, 
            ub_percentile_filter,
            weighted,
-           infer_missing_uv) {
-    filen <- paste0(
-      "filtered_data--", 
-      "lb_perc_", lb_percentile_filter, 
-      "-ub_perc_", ub_percentile_filter,
-      "-weighted_", weighted,
-      "-infer_missing_uv_", infer_missing_uv, ".fst"
-    )
+           replace_outliers,
+           infer_missing_uv_before,
+           infer_missing_uv_after) {
+    
+    message("Creating dataset with group variables")
+    filen <- paste0("filtered_data--",
+                    "-lb_perc_", lb_percentile_filter, 
+                    "-ub_perc_", ub_percentile_filter,
+                    "-weighted_", weighted,
+                    "-replace_outliers_", replace_outliers, 
+                    "-infer_missing_uv_before_", infer_missing_uv_before, 
+                    "-infer_missing_uv_after_", infer_missing_uv_after, ".fst")
     file <- here("data", "intermediary", filen)
     df_with_group_variables  <- 
       read_fst(file) |>
@@ -144,6 +211,7 @@ save_csv_files_price_index <-
         t_isic_stade = paste(t, isic_2d_aggregated, stade)
       ) 
     
+    message("Computing year price index")
     # t level 
     t_price_index_df <- 
       compute_price_index(
@@ -160,13 +228,16 @@ save_csv_files_price_index <-
       mutate(price_index = exp(cumul_delta_ln_price_index)) 
     filen <- paste0(
       "t--delta_ln_price_index--", 
-      "lb_perc_", lb_percentile_filter, 
+      "-lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
       "-weighted_", weighted,
-      "-infer_missing_uv_", infer_missing_uv, ".csv")
+      "-replace_outliers_", replace_outliers, 
+      "-infer_missing_uv_before_", infer_missing_uv_before, 
+      "-infer_missing_uv_after_", infer_missing_uv_after, ".csv")
     file <- here("data", "intermediary", filen)
     write_csv(t_price_index_df, file)
     
+    message("Computing year x production_stage price index")
     # By t-stade
     t_stade_price_index_df <- 
       compute_price_index(
@@ -188,10 +259,12 @@ save_csv_files_price_index <-
       select(-cumul_delta_ln_price_index)
     filen <- paste0(
       "t-stade--delta_ln_price_index--", 
-      "lb_perc_", lb_percentile_filter, 
+      "-lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
       "-weighted_", weighted,
-      "-infer_missing_uv_", infer_missing_uv, ".csv")
+      "-replace_outliers_", replace_outliers, 
+      "-infer_missing_uv_before_", infer_missing_uv_before, 
+      "-infer_missing_uv_after_", infer_missing_uv_after, ".csv")
     file <- here("data", "intermediary", filen)
     write_csv(t_stade_price_index_df, file)
     
@@ -216,10 +289,12 @@ save_csv_files_price_index <-
       select(-cumul_delta_ln_price_index)
     filen <- paste0(
       "t-isic_2d--delta_ln_price_index--", 
-      "lb_perc_", lb_percentile_filter, 
+      "-lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
       "-weighted_", weighted,
-      "-infer_missing_uv_", infer_missing_uv, ".csv")
+      "-replace_outliers_", replace_outliers, 
+      "-infer_missing_uv_before_", infer_missing_uv_before, 
+      "-infer_missing_uv_after_", infer_missing_uv_after, ".csv")
     file <- here("data", "intermediary", filen)
     write_csv(t_isic2d_price_index_df, file)
     
@@ -243,11 +318,12 @@ save_csv_files_price_index <-
       mutate(price_index = exp(cumul_delta_ln_price_index)) |>
       select(-cumul_delta_ln_price_index)
     filen <- paste0(
-      "t-isic_2d-stade--delta_ln_price_index--", 
-      "lb_perc_", lb_percentile_filter, 
+      "-lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
       "-weighted_", weighted,
-      "-infer_missing_uv_", infer_missing_uv, ".csv")
+      "-replace_outliers_", replace_outliers, 
+      "-infer_missing_uv_before_", infer_missing_uv_before, 
+      "-infer_missing_uv_after_", infer_missing_uv_after, ".csv")
     file <- here("data", "intermediary", filen)
     write_csv(t_isic2d_stade_price_index_df, file)
     

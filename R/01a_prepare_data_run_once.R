@@ -61,6 +61,9 @@ nb_obs_per_isic_2d <-
   summarize(
     .by = c(t, i, j, k_4d), 
     uv_hs4d = weighted.mean(uv, v, na.rm = TRUE)) 
+filen <- paste0("t-i-j-k_4d--uv--V", versions$baci_V, ".fst")
+file <- here("data", "intermediary", filen)
+write_fst(`tijk_4d--uv`, file, compress = 100)
 
 baci_with_infered_uv <-
   baci_df |>
@@ -82,9 +85,57 @@ filen <- paste0("t-i-j-k--uv--infered_from_k_4d--V", versions$baci_V, ".fst")
 file <- here("data", "intermediary", filen)
 write_fst(baci_with_infered_uv, file, compress = 100)
 
-filen <- paste0("t-i-j-k--uv--infered_from_k_4d--V", versions$baci_V, ".fst")
-file <- here("data", "intermediary", filen)
-tmp <-
+
+filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
+file <- file.path(paths$pc_baci_p, "Data", versions$baci_V, filen)
+baci_df <- 
   read_fst(file) |>
-  summarize(.by = c(t, infered_uv_fl),
-            nb_ijk = n_distinct(i, j, k))
+  mutate(uv = v / q)
+
+lagged_baci_df <- 
+  baci_df |>
+  mutate(t = t + 1) |>
+  select(t, i, j, k, v, uv) |>
+  rename(l_v = v, l_uv = uv)
+
+delta_ln_uv_df <- 
+  baci_df |>
+  left_join(lagged_baci_df, by = c("t", "i", "j", "k")) |> 
+  mutate(delta_ln_uv = log(uv) - log(l_uv)) |>
+  mutate(k = str_pad(k, 6, side = "left", pad = "0")) |>
+  mutate(k_4d = substr(k, 1, 4)) |>
+  select(t, i, j, k, delta_ln_uv, k_4d)
+
+tmp <-
+  delta_ln_uv_df |>
+  filter(t == 2021, i == 458, j == 360, k_4d == "8427")
+
+tmp2 <- 
+  tmp |>
+  group_by(t, i, k_4d) |>
+  mutate(d_ln_uv__t_i_k_4d = median(delta_ln_uv, na.rm = TRUE)) |>
+  ungroup()
+  
+  
+
+aggregated_delta_ln_uv_df <- 
+  delta_ln_uv_df |>
+  # sample_n(1E5) |>
+  # mutate(k = str_pad(k, 6, side = "left", pad = "0")) |>
+  # mutate(k_4d = substr(k, 1, 4)) |>
+  group_by(t, i, j, k_4d) |>
+  mutate(d_ln_uv__t_i_j_k_4d = median(delta_ln_uv, na.rm = TRUE)) |>
+  ungroup() |>
+  # Compute median change in delta_ln_uv at a more aggregated level
+  group_by(t, i, j, k_4d) |>
+  mutate(d_ln_uv__t_i_j_k_4d = median(delta_ln_uv, na.rm = TRUE)) |>
+  ungroup() |>
+  group_by(t, i, k_4d) |>
+  mutate(d_ln_uv__t_i_k_4d = median(delta_ln_uv, na.rm = TRUE)) |>
+  ungroup() |>
+  group_by(t, k_4d) |>
+  mutate(d_ln_uv__t_k_4d = median(delta_ln_uv, na.rm = TRUE)) |>
+  ungroup() 
+filen <- paste0("t-i-j-k--aggregated_delta_ln_uv--V", versions$baci_V, ".fst")
+file <- here("data", "intermediary", filen)
+write_fst(aggregated_delta_ln_uv_df, file, compress = 100)
