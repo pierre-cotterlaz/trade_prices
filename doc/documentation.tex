@@ -28,16 +28,22 @@ On calcule les indices de prix par groupe de produits, un groupe de produits pou
 Le poids reflète l'importance du flux au sein des échanges du groupe de produits, c'est une moyenne de la part du flux en $t$ et de sa part en $t-1$. 
 $$w_{i,j,k,t} = \frac{1}{2} \left( \frac{v_{i,j,k,t}}{v_{K,t}} + \frac{v_{i,j,k,t-1}}{v_{K,t-1}}  \right)$$
 
-Au niveau de chaque produit, les variations de valeur unitaire aberrantes sont retirées. On calcule pour chaque produit la distribution des variations de valeurs unitaires et l'on ne conserve que les variations se situant entre le 5e et le 95e centile.
+Au niveau de chaque produit, les variations de valeur unitaire aberrantes sont remplacées par des valeurs moins aberrantes. Plus précisément, on calcule pour chaque produit la distribution des variations de valeurs unitaires et l'on remplace les variations se situant en deça du 5e centile par le 5e centile, et les observations au delà du 95e centile par le 95e centile.
 
 On présente 4 méthodes : 
 
 \begin{enumerate}
 \item Pas de retrait des valeurs aberrantes.
-\item Retrait des valeurs aberrantes sur la base d'un filtrage non pondéré (5\% des observations).
-\item Retrait des valeurs aberrantes sur la base d'un filtrage pondéré (5\% du $w$).
-\item Remplacement des $d\ln(UV_{i,j,k,t})$ par leur moyenne au niveau HS 4 chiffres, $i,j,t$, avec filtrage non pondéré. 
+\item Retrait des valeurs aberrantes sur la base d'un filtrage non pondéré (10\% des observations).
+\item Retrait des valeurs aberrantes sur la base d'un filtrage pondéré (10\% du $w$).
+\item Filtrage non pondéré, puis remplacement des $d\ln(UV_{i,j,k,t})$ par leur médiane au niveau HS 4 chiffres, $i,j,t$, ou plus agrégé encore si besoin.  
 \end{enumerate}
+
+NB : l'imputation permet de faire apparaître des $d\ln(UV_{i,j,k,t})$ pour des $i,j,k,t$ avec $v_t$ ou $v_{t-1}$ manquant mais on ne les conserve pas.
+
+Tables de passage HS-ISIC et HS-stade.
+
+
 
 \end{document}
 

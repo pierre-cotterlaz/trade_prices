@@ -43,6 +43,8 @@ versions <- list(
   baci_V = "202301",
   trade_price_V = "202306")
 
+first_year <- 2017
+
 # * Run programs ----------------------------------------------------------
 
 library(callr)

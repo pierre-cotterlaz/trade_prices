@@ -1,4 +1,5 @@
 library(tidyverse)
+library(ggrepel)
 library(here)
 theme_set(theme_bw())
 
@@ -10,15 +11,10 @@ list_methods <-
     0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE, 
     0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE, 
     0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , FALSE    , TRUE             , TRUE                    , FALSE
+    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , TRUE
   )
 
-dict_method_names <- 
-  tribble(~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~infer_missing_uv, ~method_name,
-          0, 1, FALSE, FALSE, "No filtering",
-          0.05, 0.95, FALSE, FALSE, "5%, unweighted",
-          0.05, 0.95, TRUE, FALSE, "5%, weighted",
-          0.05, 0.95, FALSE, TRUE, "5%, unweighted, infer missing uv")
+
 
 dict_method_names <-  
   tribble(
@@ -26,12 +22,31 @@ dict_method_names <-
     0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE                  , "Raw data",
     0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE                  , "5% unweighted",
     0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "5% weighted",
-    0.05                 , 0.95                 , FALSE    , TRUE             , TRUE                    , FALSE                  , "5% unweighted, infer missing uv"
+    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , TRUE                   , "5% unweighted, infer missing uv"
   )
 
 first_year <- 2017
 
 # * Over time -------------------------------------------------------------
+
+lb_percentile_filter <- 0.05
+ub_percentile_filter <- 0.95
+weighted <- FALSE
+replace_outliers <- TRUE
+infer_missing_uv_before <- FALSE
+infer_missing_uv_after <- TRUE
+filen <- paste0(
+  "t--delta_ln_price_index--", 
+  "-lb_perc_", lb_percentile_filter, 
+  "-ub_perc_", ub_percentile_filter,
+  "-weighted_", weighted,
+  "-replace_outliers_", replace_outliers, 
+  "-infer_missing_uv_before_", infer_missing_uv_before, 
+  "-infer_missing_uv_after_", infer_missing_uv_after, ".csv")
+file <- here("data", "intermediary", filen)
+message(file.info(file)$mtime)
+df <- 
+  read_csv(file)
 
 open_csv <- 
   function(lb_percentile_filter, 
@@ -118,17 +133,27 @@ list_stades <-
   pull()
 names(list_stades) <- list_stades
 
+indicator_dict <- 
+  tribble(
+    ~type, ~indicator_name,
+    "trade_value_base100", "Value",
+    "trade_volume_base100", "Volume")
+
 lb_percentile_filter <- 0.05
 ub_percentile_filter <- 0.95
 weighted <- FALSE
-infer_missing_uv <- FALSE
+replace_outliers <- TRUE
+infer_missing_uv_before <- FALSE
+infer_missing_uv_after <- FALSE
 
 filen <- paste0(
   "t-stade--delta_ln_price_index--", 
-  "lb_perc_", lb_percentile_filter, 
+  "-lb_perc_", lb_percentile_filter, 
   "-ub_perc_", ub_percentile_filter,
   "-weighted_", weighted,
-  "-infer_missing_uv_", infer_missing_uv, ".csv")
+  "-replace_outliers_", replace_outliers, 
+  "-infer_missing_uv_before_", infer_missing_uv_before, 
+  "-infer_missing_uv_after_", infer_missing_uv_after, ".csv")
 file <- here("data", "intermediary", filen)
 graph_df <- 
   read_csv(file) |> 
@@ -139,13 +164,6 @@ graph_df <-
     trade_volume_base100 = trade_value_base100 / price_index) |>
   ungroup()
 
-indicator_dict <- 
-  tribble(
-    ~type, ~indicator_name,
-    "trade_value_base100", "Value",
-    "trade_volume_base100", "Volume")
-
-library(ggrepel)
 make_graph_stade <- function(stade_select){
   label_data <-
     graph_df |>
@@ -201,13 +219,20 @@ dev.off()
 # Compare different methodologies
 
 open_csv <- 
-  function(lb_percentile_filter, ub_percentile_filter, weighted, infer_missing_uv){
+  function(lb_percentile_filter, 
+           ub_percentile_filter, 
+           weighted, 
+           replace_outliers, 
+           infer_missing_uv_before, 
+           infer_missing_uv_after) {
     filen <- paste0(
       "t-stade--delta_ln_price_index--", 
-      "lb_perc_", lb_percentile_filter, 
+      "-lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
       "-weighted_", weighted,
-      "-infer_missing_uv_", infer_missing_uv, ".csv")
+      "-replace_outliers_", replace_outliers, 
+      "-infer_missing_uv_before_", infer_missing_uv_before, 
+      "-infer_missing_uv_after_", infer_missing_uv_after, ".csv")
     file <- here("data", "intermediary", filen)
     df <- 
       read_csv(file) |>
@@ -215,7 +240,9 @@ open_csv <-
       mutate(lb_percentile_filter = lb_percentile_filter,
              ub_percentile_filter = ub_percentile_filter,
              weighted = weighted,
-             infer_missing_uv = infer_missing_uv) 
+             replace_outliers = replace_outliers,
+             infer_missing_uv_before = infer_missing_uv_before,
+             infer_missing_uv_after = infer_missing_uv_after) 
     return(df)
   }
 
@@ -223,11 +250,12 @@ graph_df <-
   pmap(list_methods, open_csv) |>
   list_rbind() |>
   left_join(dict_method_names,
-            by = c(
-              "lb_percentile_filter", 
-              "ub_percentile_filter", 
-              "weighted",
-              "infer_missing_uv")) |>
+            by = c("lb_percentile_filter", 
+                   "ub_percentile_filter", 
+                   "weighted",
+                   "replace_outliers",
+                   "infer_missing_uv_before",
+                   "infer_missing_uv_after")) |>
   group_by(stade, method_name) |>
   mutate(
     price_index = price_index * 100,
@@ -292,11 +320,12 @@ plot(graph)
 
 filen <- paste0(
   "t-isic_2d--delta_ln_price_index--", 
-  "lb_perc_", lb_percentile_filter, 
+  "-lb_perc_", lb_percentile_filter, 
   "-ub_perc_", ub_percentile_filter,
   "-weighted_", weighted,
-  "-infer_missing_uv_", infer_missing_uv, ".csv"
-)
+  "-replace_outliers_", replace_outliers, 
+  "-infer_missing_uv_before_", infer_missing_uv_before, 
+  "-infer_missing_uv_after_", infer_missing_uv_after, ".csv")
 file <- here("data", "intermediary", filen)
 graph_df <- 
   read_csv(file) |> 
@@ -357,13 +386,20 @@ dev.off()
 # Compare different methodologies
 
 open_csv <- 
-  function(lb_percentile_filter, ub_percentile_filter, weighted, infer_missing_uv){
+  function(lb_percentile_filter, 
+           ub_percentile_filter, 
+           weighted, 
+           replace_outliers, 
+           infer_missing_uv_before, 
+           infer_missing_uv_after) {
     filen <- paste0(
       "t-isic_2d--delta_ln_price_index--", 
-      "lb_perc_", lb_percentile_filter, 
+      "-lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
       "-weighted_", weighted,
-      "-infer_missing_uv_", infer_missing_uv, ".csv")
+      "-replace_outliers_", replace_outliers, 
+      "-infer_missing_uv_before_", infer_missing_uv_before, 
+      "-infer_missing_uv_after_", infer_missing_uv_after, ".csv")
     file <- here("data", "intermediary", filen)
     df <- 
       read_csv(file) |>
@@ -371,7 +407,9 @@ open_csv <-
       mutate(lb_percentile_filter = lb_percentile_filter,
              ub_percentile_filter = ub_percentile_filter,
              weighted = weighted,
-             infer_missing_uv = infer_missing_uv) 
+             replace_outliers = replace_outliers,
+             infer_missing_uv_before = infer_missing_uv_before,
+             infer_missing_uv_after = infer_missing_uv_after) 
     return(df)
   }
 
@@ -379,10 +417,12 @@ graph_df <-
   pmap(list_methods, open_csv) |>
   list_rbind() |>
   left_join(dict_method_names,
-            by = c("lb_percentile_filter",
-                   "ub_percentile_filter",
+            by = c("lb_percentile_filter", 
+                   "ub_percentile_filter", 
                    "weighted",
-                   "infer_missing_uv")) |>
+                   "replace_outliers",
+                   "infer_missing_uv_before",
+                   "infer_missing_uv_after")) |>
   group_by(isic, method_name) |>
   mutate(
     price_index = price_index * 100,

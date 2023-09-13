@@ -85,7 +85,34 @@ filen <- paste0("t-i-j-k--uv--infered_from_k_4d--V", versions$baci_V, ".fst")
 file <- here("data", "intermediary", filen)
 write_fst(baci_with_infered_uv, file, compress = 100)
 
+# This file is used to compute total trade values
+# It is "raw" as opposed to the "filtered" df used to compute prices
+filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
+file <- file.path(paths$pc_baci_p, "Data", versions$baci_V, filen)
+raw_baci_with_group_variables  <- 
+  read_fst(file)  |>
+  left_join(hs_isic_df, by = "k") |>
+  # NB because HS codes may be associated with several ISIC codes
+  # the dataset will have more rows than defined by t-i-j-k but 
+  # the total trade flow will remain correct
+  mutate(v = v * share) |>
+  select(-share) |>
+  left_join(isic__isic_for_prices, by = "isic_2d") |> 
+  left_join(hs_stade_df, by = "k") |>
+  mutate(v = v * share) |>
+  select(-share) |>
+  mutate(
+    t_k = paste(t, k),
+    t_isic = paste(t, isic_2d_aggregated),
+    t_stade = paste(t, stade),
+    t_isic_stade = paste(t, isic_2d_aggregated, stade)
+  ) 
+filen <- paste0("t-i-j-k--BACI_with_group_variables--HS", versions$HS, "-V", versions$baci_V, ".fst")
+file <- here("data", "intermediary", filen)
+write_fst(raw_baci_with_group_variables, file, compress = 100)
 
+
+# delta_ln_uv computed at much aggregated levels 
 filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
 file <- file.path(paths$pc_baci_p, "Data", versions$baci_V, filen)
 baci_df <- 
@@ -105,18 +132,6 @@ delta_ln_uv_df <-
   mutate(k = str_pad(k, 6, side = "left", pad = "0")) |>
   mutate(k_4d = substr(k, 1, 4)) |>
   select(t, i, j, k, delta_ln_uv, k_4d)
-
-tmp <-
-  delta_ln_uv_df |>
-  filter(t == 2021, i == 458, j == 360, k_4d == "8427")
-
-tmp2 <- 
-  tmp |>
-  group_by(t, i, k_4d) |>
-  mutate(d_ln_uv__t_i_k_4d = median(delta_ln_uv, na.rm = TRUE)) |>
-  ungroup()
-  
-  
 
 aggregated_delta_ln_uv_df <- 
   delta_ln_uv_df |>
