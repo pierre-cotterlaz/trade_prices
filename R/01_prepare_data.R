@@ -36,6 +36,7 @@ hs_stade_df <-
     .default = stade, 
     is.na(stade) ~ "6_NEC"
   )) |>
+  replace_na(list(share = 1)) |>
   arrange(k)
 rm(list_k_in_baci)
 

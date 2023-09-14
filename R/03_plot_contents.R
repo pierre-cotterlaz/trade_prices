@@ -1,4 +1,5 @@
 library(tidyverse)
+library(glue)
 library(ggrepel)
 library(here)
 theme_set(theme_bw())
@@ -26,16 +27,16 @@ dict_method_names <-
 list_methods <-  
   tribble(
     ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
-    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE 
+    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE                  ,
+    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE                  
   )
 
 dict_method_names <-  
   tribble(
     ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~method_name,
-    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE                  , "Raw data"
+    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE                  , "Raw data",
+    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE                  , "5% unweighted"
   )
-
-first_year <- 2017
 
 # * Over time -------------------------------------------------------------
 
@@ -120,7 +121,7 @@ graph <-
   geom_hline(yintercept = 100) +
   labs(
     x = element_blank(),
-    y = paste0("Trade (100 = ", first_year, ")")
+    y = paste0("Price index (100 = ", first_year, ")")
   ) +
   theme(
     legend.position = "null"
@@ -128,11 +129,13 @@ graph <-
 plot(graph)
 
 ggsave(
-  filename = here("output",
-              "figures",
-              "price_index_over_time__different_methodologies.pdf"),
+  filename = here(
+    "output",
+    "figures",
+    glue("price_index_over_time__different_methodologies__hs{versions$HS}.pdf")
+  ),
   width = 7, height = 5
-)
+) 
 
 # * By stade over time ----------------------------------------------------
 
@@ -159,6 +162,7 @@ infer_missing_uv_after <- FALSE
 
 filen <- paste0(
   "t-stade--delta_ln_price_index--", 
+  "HS_", versions$HS,
   "-lb_perc_", lb_percentile_filter, 
   "-ub_perc_", ub_percentile_filter,
   "-weighted_", weighted,
@@ -218,7 +222,7 @@ list_graphs[[1]]
 pdf(
   file = here("output",
               "figures",
-              "trade_by_stade_over_time.pdf"),
+              glue("trade_by_stade_over_time__hs{versions$HS}.pdf")),
   width = 7, height = 5, onefile = TRUE
 )
 walk(
@@ -238,6 +242,7 @@ open_csv <-
            infer_missing_uv_after) {
     filen <- paste0(
       "t-stade--delta_ln_price_index--", 
+      "HS_", versions$HS,
       "-lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
       "-weighted_", weighted,
@@ -301,9 +306,10 @@ list_graphs <-
 list_graphs[[1]]
 
 pdf(
-  file = here("output",
-              "figures",
-              "price_index_by_stade_over_time__different_methodologies.pdf"),
+  file = here(
+    "output", "figures",
+    glue("price_index_by_stade_over_time__different_methodologies__hs{versions$HS}.pdf")
+  ),
   width = 7, height = 5, onefile = TRUE
 )
 walk(
@@ -332,6 +338,7 @@ plot(graph)
 
 filen <- paste0(
   "t-isic_2d--delta_ln_price_index--", 
+  "HS_", versions$HS,
   "-lb_perc_", lb_percentile_filter, 
   "-ub_perc_", ub_percentile_filter,
   "-weighted_", weighted,
@@ -352,6 +359,18 @@ make_graph_isic <- function(isic_select){
     isic_2d_dict |> 
     filter(isic_2d == isic_select) |>
     pull(isic_2d_name)
+  label_data <-
+    graph_df |>
+    select(t, isic, starts_with("trade")) |>
+    pivot_longer(cols = starts_with("trade"),
+                 names_to = "type", 
+                 values_to = "trade") |>
+    filter(isic == isic_select) |>
+    left_join(isic_2d_dict, by = c("isic" = "isic_2d")) |>
+    left_join(indicator_dict, by = "type") |>
+    group_by(indicator_name) |>
+    slice_max(order_by = t, n = 1) 
+
   graph <- 
     graph_df |>
     select(t, isic, starts_with("trade")) |>
@@ -363,15 +382,17 @@ make_graph_isic <- function(isic_select){
     ggplot(aes(x = t, y = trade, colour = type)) +
     geom_line() +
     geom_point() +
+    geom_label_repel(aes(label = indicator_name), data = label_data) +
     geom_hline(yintercept = 100) +
     labs(
       title = isic_2d_name_str,
       x = element_blank(),
-      y = "Trade (100 = 2017)"
+      y = glue("Trade (100 = {first_year})")
     ) +
     theme(
-      legend.title = element_blank()
+      legend.position = "null"
     )
+  
   return(graph)
 }
 
@@ -386,7 +407,7 @@ list_graphs[[1]]
 
 pdf(
   file = here("output", "figures",
-              "trade_by_isic_over_time.pdf"),
+              glue("trade_by_isic_over_time__hs{versions$HS}.pdf")),
   width = 7, height = 5, onefile = TRUE
 )
 walk(
@@ -406,6 +427,7 @@ open_csv <-
            infer_missing_uv_after) {
     filen <- paste0(
       "t-isic_2d--delta_ln_price_index--", 
+      "HS_", versions$HS,
       "-lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
       "-weighted_", weighted,
@@ -447,6 +469,7 @@ make_graph_isic <- function(isic_select){
     isic_2d_dict |> 
     filter(isic_2d == isic_select) |>
     pull(isic_2d_name)
+  
   graph <- 
     graph_df |>
     filter(isic == isic_select) |>
@@ -461,7 +484,7 @@ make_graph_isic <- function(isic_select){
     labs(
       title = isic_2d_name_str,
       x = element_blank(),
-      y = "Price index (100 = 2017)"
+      y = glue("Price index (100 = {first_year})")
     ) +
     theme(
       legend.title = element_blank()
@@ -480,9 +503,11 @@ list_graphs <-
 list_graphs[[1]]
 
 pdf(
-  file = here("output",
-              "figures",
-              "price_index_by_isic_2d_over_time__different_methodologies.pdf"),
+  file = here(
+    "output",
+    "figures",
+    glue("price_index_by_isic_2d_over_time__different_methodologies__hs{versions$HS}.pdf"
+  )),
   width = 7, height = 5, onefile = TRUE
 )
 walk(

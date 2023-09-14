@@ -3,6 +3,7 @@
 \usepackage{amsmath,amsthm}
 \usepackage[french]{babel}
 \usepackage{graphicx}
+\usepackage{hyperref}
 \usepackage[utf8]{inputenc}
 \usepackage{setspace}
 \setstretch{1.2}
@@ -28,7 +29,7 @@ On calcule les indices de prix par groupe de produits, un groupe de produits pou
 Le poids reflète l'importance du flux au sein des échanges du groupe de produits, c'est une moyenne de la part du flux en $t$ et de sa part en $t-1$. 
 $$w_{i,j,k,t} = \frac{1}{2} \left( \frac{v_{i,j,k,t}}{v_{K,t}} + \frac{v_{i,j,k,t-1}}{v_{K,t-1}}  \right)$$
 
-Au niveau de chaque produit, les variations de valeur unitaire aberrantes sont remplacées par des valeurs moins aberrantes. Plus précisément, on calcule pour chaque produit la distribution des variations de valeurs unitaires et l'on remplace les variations se situant en deça du 5e centile par le 5e centile, et les observations au delà du 95e centile par le 95e centile.
+Au niveau de chaque produit, les variations de valeur unitaire aberrantes sont remplacées par des valeurs moins aberrantes. Plus précisément, on calcule pour chaque produit la distribution des variations de valeurs unitaires et l'on remplace les variations se situant en deça du 5e centile par la valeur au 5e centile, et les observations au delà du 95e centile par la valeur au 95e centile.
 
 On présente 4 méthodes : 
 
@@ -41,9 +42,33 @@ On présente 4 méthodes :
 
 NB : l'imputation permet de faire apparaître des $d\ln(UV_{i,j,k,t})$ pour des $i,j,k,t$ avec $v_t$ ou $v_{t-1}$ manquant mais on ne les conserve pas.
 
-Tables de passage HS-ISIC et HS-stade.
+\paragraph{Nomenclature sectorielle:} 
 
+Il s'agit de la nomenclature \href{https://unstats.un.org/unsd/classifications/Econ}{ISIC} à deux chiffres. Pour le moment, la table de passage SH-ISIC est obtenue via une table de passage auparavant mise à disposition par Ramon, mais plus disponible. Un cheminement alternatif serait d'utiliser les tables de passage de l'UNSD. HS96 - CPC1.0 puis CPC1.0 - CPC1.1 puis CPC1.1 - ISIC3.1.
 
+Seuls les secteurs représentant au moins 1\% des flux mondiaux sont conservés, les autres secteurs sont regroupés en un résidu (``NED'').
+
+\paragraph{Stades de production:}
+
+Les stades de production sont déterminés à partir de la BEC 4.0. Le passage SH - BEC se fait à partir des tables de passage de l'UNSD. 
+
+\paragraph{Obtention des variables finales}
+
+Le taux de croissance annuel des prix s'obtient par l'exponentielle de la variation du log de l'indice puisque:
+$$ d\ln(T_{K,t}) = \ln \left( \frac{T_{K,t}}{T_{K,t-1}} \right) $$
+donc 
+$$ \exp(d\ln(T_{K,t})) = \frac{T_{K,t}}{T_{K,t-1}}$$
+  
+D'autre part:
+$$\frac{T_{K,t}}{T_{K,2000}} = \frac{T_{K,t}}{T_{K,t-1}} \dots \frac{T_{K,2001}}{T_{K,2000}}$$
+
+donc en prenant l'exponentielle de la somme cumulée en $t$ des $d\ln(T_{K,t})$ à partir de 2000 on obtient l'indice de prix en base 2000. 
+
+C'est ainsi que l'on crée la variable \textbf{price\_index\_base\_100}. 
+
+A partir de BACI, on obtient également le commerce total au niveau $K, t$, que l'on peut utiliser pour calculer un indice \textbf{trade\_value\_base\_100} au niveau $K, t$. 
+
+On obtient le commerce en volume en divisant l'indice de commerce en valeur par l'indice de prix. 
 
 \end{document}
 

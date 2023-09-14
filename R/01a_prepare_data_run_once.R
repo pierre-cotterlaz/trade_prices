@@ -6,6 +6,8 @@ baci_df <-
 # |>
   # mutate(uv = v/q)
 
+# * nomenclatures --------------------------------------------------------
+
 # ISIC_2d - our ISIC
 
 filen <- paste0("t-i-j-isic_2d--BACI--V", versions$baci_V, ".fst")
@@ -45,6 +47,12 @@ hs_isic_df <-
   mutate(k = as.numeric(!!k_varname)) |>
   select(k, isic_2d, share)
 
+# HS - ISIC for prices
+filen <- paste0("ISIC_2d-our_ISIC.csv")
+file <- here("data", "nomenclatures", filen)
+isic__isic_for_prices <- 
+  read_csv(file) |>
+  as_tibble()
 hs_isic_for_prices <- 
   hs_isic_df |>
   left_join(isic__isic_for_prices, by = "isic_2d") |> 
@@ -53,12 +61,11 @@ filen <- paste0("HS", versions$HS, "-our_ISIC--share.csv")
 file <- here("data", "nomenclatures", filen)
 write_csv(hs_isic_for_prices, file)
 
-
-distribution_nb_isic_per_hs <- 
-  hs_isic_df |> 
-  mutate(nb_isic = 1 / share) |>
-  summarize(.by = nb_isic, 
-            nb_hs = n_distinct(k))
+# distribution_nb_isic_per_hs <- 
+#   hs_isic_df |> 
+#   mutate(nb_isic = 1 / share) |>
+#   summarize(.by = nb_isic, 
+#             nb_hs = n_distinct(k))
 
 # BACI aggregated in ISIC_2d, useful to know the number of trade flows 
 baci_in_isic_2d <- 
@@ -119,19 +126,21 @@ filen <- paste0("t-i-j-k--uv--infered_from_k_4d--V", versions$baci_V, ".fst")
 file <- here("data", "intermediary", filen)
 write_fst(baci_with_infered_uv, file, compress = 100)
 
+#  BACI with group variables ----------------------------------------------
+
 # This file is used to compute total trade values
 # It is "raw" as opposed to the "filtered" df used to compute prices
 filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
 file <- file.path(paths$pc_baci_p, "Data", versions$baci_V, filen)
 raw_baci_with_group_variables  <- 
   read_fst(file)  |>
-  left_join(hs_isic_df, by = "k") |>
+  mutate(k = as.numeric(k)) |>
+  left_join(hs_isic_for_prices, by = "k") |>
   # NB because HS codes may be associated with several ISIC codes
   # the dataset will have more rows than defined by t-i-j-k but 
   # the total trade flow will remain correct
   mutate(v = v * share) |>
   select(-share) |>
-  left_join(isic__isic_for_prices, by = "isic_2d") |> 
   left_join(hs_stade_df, by = "k") |>
   mutate(v = v * share) |>
   select(-share) |>

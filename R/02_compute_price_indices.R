@@ -31,7 +31,7 @@ list_arguments <-
 list_arguments <- 
   tribble(
     ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
-    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE, 
+    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE, 
   )
 
 pwalk(list_arguments, remove_outliers)
@@ -80,19 +80,19 @@ raw_baci_with_group_variables <-
 #   infer_missing_uv_before = infer_missing_uv_before_select,
 #   infer_missing_uv_after = infer_missing_uv_after_select)
 
-list_arguments <- 
-  tribble(
-    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
-    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , TRUE     , TRUE             , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , TRUE
-  )
-
-list_arguments <- 
-  tribble(
-    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
-    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE, 
-  )
+# list_arguments <- 
+#   tribble(
+#     ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
+#     0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE, 
+#     0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE, 
+#     0.05                 , 0.95                 , TRUE     , TRUE             , FALSE                   , FALSE, 
+#     0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , TRUE
+#   )
+# 
+# list_arguments <- 
+#   tribble(
+#     ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
+#     0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE, 
+#   )
 
 pwalk(list_arguments, save_csv_files_price_index)
