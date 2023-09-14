@@ -1,4 +1,41 @@
 
+# 
+create_delta_ln_uv_data <- function(
+    infer_missing_uv_before){
+  
+  if (infer_missing_uv_before == FALSE){
+    filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
+    file <- file.path(paths$baci_p, "Data", versions$baci_V, filen)
+    baci_df <- 
+      read_fst(file) |>
+      mutate(uv = v / q)
+    
+  }
+  if (infer_missing_uv_before == TRUE){
+    filen <- paste0("t-i-j-k--uv--infered_from_k_4d--V", versions$baci_V, ".fst")
+    file <- here("data", "intermediary", filen)
+    baci_df <- 
+      read_fst(file)
+  }
+  
+  lagged_baci_df <- 
+    baci_df |>
+    mutate(t = t + 1) |>
+    select(t, i, j, k, v, uv) |>
+    rename(l_v = v, l_uv = uv)
+  
+  delta_ln_uv_df <- 
+    baci_df |>
+    left_join(lagged_baci_df, by = c("t", "i", "j", "k")) |> 
+    # Drop if uv missing in t or t-1 since we cannot compute a time variation in this case
+    filter(!(is.na(l_uv) | is.na(uv))) |> 
+    mutate(delta_ln_uv = log(uv) - log(l_uv)) |>
+    filter(t >= first_year + 1) |>
+    select(t, i, j, k, v, l_v, delta_ln_uv)
+  
+  return(delta_ln_uv_df)
+}
+
 replace_missing_delta_ln_uv <- function(input_df, infer_missing_uv_after){
   
   if (infer_missing_uv_after == TRUE) {
@@ -52,49 +89,17 @@ replace_missing_delta_ln_uv <- function(input_df, infer_missing_uv_after){
   return(missing_uv_replaced_df)
 }
 
-
-# 
-create_delta_ln_uv_data <- function(infer_missing_uv){
-  if (infer_missing_uv == FALSE){
-    filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
-    file <- file.path(paths$pc_baci_p, "Data", versions$baci_V, filen)
-    baci_df <- 
-      read_fst(file) |>
-      mutate(uv = v/q)
-  }
-  if (infer_missing_uv == TRUE){
-    filen <- paste0("t-i-j-k--uv--infered_from_k_4d--V", versions$baci_V, ".fst")
-    file <- here("data", "intermediary", filen)
-    baci_df <- 
-      read_fst(file)
-  }
-  lagged_baci_df <- 
-    baci_df |>
-    mutate(t = t + 1) |>
-    select(t, i, j, k, v, uv) |>
-    rename(l_v = v, l_uv = uv)
-  
-  delta_ln_uv_df <- 
-    baci_df |>
-    left_join(lagged_baci_df, by = c("t", "i", "j", "k")) |> 
-    # Drop if uv missing in t or t-1 since we cannot compute a time variation in this case
-    filter(!(is.na(l_uv) | is.na(uv))) |> 
-    mutate(delta_ln_uv = log(uv) - log(l_uv)) |>
-    select(t, i, j, k, v, l_v, delta_ln_uv)
-  return(delta_ln_uv_df)
-}
-
-
 # Remove outliers 
 # We remove the outliers on a dataset that has the correct t-i-j-k structure
 # not the dataset with group variables which has more rows than t-i-j-k
 remove_outliers <- 
-function(lb_percentile_filter, 
+  function(lb_percentile_filter, 
          ub_percentile_filter,
          weighted,
          replace_outliers,
          infer_missing_uv_before,
          infer_missing_uv_after) {
+  
   message("lb_percentile_filter: ", lb_percentile_filter, 
           ", ub_percentile_filter: ", ub_percentile_filter)
   message("weighted: ", weighted, 
@@ -103,7 +108,8 @@ function(lb_percentile_filter,
           ", infer_missing_uv_after: ", infer_missing_uv_after)
   message("=================================================")
 
-  delta_ln_uv_df <- create_delta_ln_uv_data(infer_missing_uv = infer_missing_uv_before) 
+  delta_ln_uv_df <- create_delta_ln_uv_data(
+    infer_missing_uv_before = infer_missing_uv_before) 
   
   if (weighted == FALSE){
     filtered_df <- 
@@ -146,13 +152,43 @@ function(lb_percentile_filter,
       mutate(sh_w = w_k / sum(w_k, na.rm = TRUE)) |>
       arrange(t, k, delta_ln_uv) |>
       mutate(`t-k--cum_sh_w` = cumsum(sh_w)) |>
-      ungroup() |> 
-      group_by(t, k) |>
-      filter(between(
-        `t-k--cum_sh_w`, 
-        lb_percentile_filter,
-        ub_percentile_filter)) |>
-      ungroup() 
+      ungroup()
+    if (replace_outliers == FALSE) {
+      filtered_df <-
+        filtered_df |> 
+        group_by(t, k) |>
+        filter(between(
+          `t-k--cum_sh_w`, 
+          lb_percentile_filter,
+          ub_percentile_filter)) |>
+        ungroup() 
+    }
+    if (replace_outliers == TRUE) {
+      filtered_df <- 
+        filtered_df |>
+        mutate(lb_delta_ln_uv = case_when( 
+          `t-k--cum_sh_w` <= 0.05 ~ delta_ln_uv, 
+          .default = NA_real_)) |>
+        mutate(ub_delta_ln_uv = case_when( 
+          `t-k--cum_sh_w` >= 0.95 ~ delta_ln_uv, 
+          .default = NA_real_)) |>
+        group_by(t, k) |>
+        mutate(lb_delta_ln_uv = max(lb_delta_ln_uv, na.rm = TRUE),
+               ub_delta_ln_uv = min(ub_delta_ln_uv, na.rm = TRUE)) |>
+        mutate(lb_delta_ln_uv = case_when( 
+          lb_delta_ln_uv == -Inf ~ min(delta_ln_uv),
+          .default = lb_delta_ln_uv)) |>
+        mutate(ub_delta_ln_uv = case_when( 
+          ub_delta_ln_uv == +Inf ~ min(delta_ln_uv),
+          .default = ub_delta_ln_uv)) |>
+        ungroup() |>
+        mutate(delta_ln_uv = case_when(
+          delta_ln_uv < lb_delta_ln_uv ~ lb_delta_ln_uv, 
+          delta_ln_uv > ub_delta_ln_uv ~ ub_delta_ln_uv,
+          .default = delta_ln_uv
+        )) |> 
+        select(t, i, j, k, delta_ln_uv, v, l_v)
+    }
   }
   # replace missing delta_ln_uv
   missing_uv_replaced_df <- 
@@ -167,6 +203,7 @@ function(lb_percentile_filter,
   
   # save file
   filen <- paste0("filtered_data--",
+                  "HS_", versions$HS,
                   "-lb_perc_", lb_percentile_filter, 
                   "-ub_perc_", ub_percentile_filter,
                   "-weighted_", weighted,
@@ -181,10 +218,12 @@ function(lb_percentile_filter,
 
 # Weight = share of observation in the cell for which we compute the price index
 
-compute_price_index <- function(
+compute_price_index <- 
+  function(
     df_with_group_variables, 
     raw_baci_with_group_variables, 
-    aggregation_level){
+    aggregation_level
+){
   aggregation_level_str <- deparse(substitute(aggregation_level))
   price_df <- 
     df_with_group_variables |>
@@ -220,8 +259,10 @@ save_csv_files_price_index <-
     message("infer_missing_uv_before: ", infer_missing_uv_before, 
             ", infer_missing_uv_after: ", infer_missing_uv_after)
     message("=================================================")
+    
     #message("Creating dataset with group variables")
     filen <- paste0("filtered_data--",
+                    "HS_", versions$HS,
                     "-lb_perc_", lb_percentile_filter, 
                     "-ub_perc_", ub_percentile_filter,
                     "-weighted_", weighted,
@@ -232,10 +273,10 @@ save_csv_files_price_index <-
     df_with_group_variables  <- 
       read_fst(file) |>
       mutate(k = as.numeric(k)) |>
-      left_join(hs_isic_df, by = "k") |>
+      left_join(hs_isic_for_prices, by = "k") |>
       mutate(v = v * share, l_v = l_v * share) |>
       select(-share) |>
-      left_join(isic__isic_for_prices, by = "isic_2d") |> 
+      # left_join(isic__isic_for_prices, by = "isic_2d") |> 
       left_join(hs_stade_df, by = "k") |>
       mutate(v = v * share, l_v = l_v * share) |>
       select(-share) |>
@@ -251,6 +292,7 @@ save_csv_files_price_index <-
     #   filter(is.na(v) | is.na(l_v) | is.na(delta_ln_uv))
 
     end_of_filenames <- paste0(
+      "HS_", versions$HS,
       "-lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
       "-weighted_", weighted,

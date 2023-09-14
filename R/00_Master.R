@@ -6,23 +6,24 @@ library(tidyverse)
 
 # * Define paths ----------------------------------------------------------
 
-
-
 define_paths <- function(location) {
   if (location == "pc") {
     PC_p <- file.path("D:", "cotterlaz")
     nomenclatures_p <- file.path(PC_p, "BACI", "Nomenclatures")
     pc_baci_p <- file.path(PC_p, "BACI", "BACI")
+    baci_p <- pc_baci_p
   }
   if (location == "baci8") {
     PC_p <- file.path("\\\\dell5820108", "cotterlaz$")
     nomenclatures_p <- file.path(PC_p, "BACI", "Nomenclatures")
     pc_baci_p <- file.path(PC_p, "BACI", "BACI")
+    baci_p <- file.path("D:", "BACI", "BACI")
   }
     return(list(
       PC_p = PC_p,
       nomenclatures_p = nomenclatures_p,
-      pc_baci_p = pc_baci_p
+      pc_baci_p = pc_baci_p,
+      baci_p = baci_p
     ))
 }
 
@@ -39,11 +40,18 @@ rm(wd)
 # * Parameters ------------------------------------------------------------
 
 versions <- list(
-  HS = 5,
+  HS = 1,
   baci_V = "202301",
   trade_price_V = "202306")
 
-first_year <- 2017
+define_first_year <- function(revision){
+  if (revision == 1){
+    first_year <- 2000
+  }
+  return(first_year)
+}
+first_year <- define_first_year(revision = versions$HS)
+rm(define_first_year)
 
 # * Run programs ----------------------------------------------------------
 

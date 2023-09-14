@@ -1,12 +1,14 @@
 
+library(tidyverse)
+
 # Read BACI ---------------------------------------------------------------
 
 filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
-file <- file.path(paths$pc_baci_p, "Data", versions$baci_V, filen)
+file <- file.path(paths$baci_p, "Data", versions$baci_V, filen)
 message(file.info(file)$mtime) 
 baci_df <- 
   read_fst(file) |>
-  mutate(uv = v/q)
+  mutate(uv = v / q)
 
 list_k_in_baci <- 
   baci_df |>
@@ -14,26 +16,20 @@ list_k_in_baci <-
 
 # Concordance tables ------------------------------------------------------
 
-# HS - ISIC_2d
-filen <- paste0("HS", versions$HS, "-CPA2_1--share.csv")
-file <- file.path(paths$nomenclatures_p, "conversions", filen)
-hs_isic_df <- 
-  read_csv(file) |>
-  as_tibble() |>
-  mutate(isic_2d = substr(CPA2_1, 0, 2)) |>
-  distinct(HS5, isic_2d) |>
-  group_by(HS5) |>
-  mutate(share = 1 / n()) |>
-  ungroup() |>
-  mutate(k = as.numeric(HS5)) |>
-  select(k, isic_2d, share)
+# filen <- paste0("HS", versions$HS, "-branch--share--fil_santé.csv")
+# file <- file.path(paths$nomenclatures_p, "Conversions", filen)
+# df <- 
+#   read_csv(file)
+
+k_varname <- sym(paste0("HS", versions$HS))
+k_varname_str <- paste0("HS", versions$HS)
 
 # HS - stade
 filen <- paste0("HS", versions$HS, "-stade--share.csv")
 file <- file.path(paths$nomenclatures_p, "conversions", filen)
 hs_stade_df <- 
   read_csv(file) |> 
-  mutate(k = as.numeric(HS5)) |>
+  mutate(k = as.numeric(!!k_varname)) |>
   select(k, stade, share) |>
   full_join(list_k_in_baci, by = "k") |> 
   mutate(stade = case_when(
@@ -41,6 +37,13 @@ hs_stade_df <-
     is.na(stade) ~ "6_NEC"
   )) |>
   arrange(k)
+rm(list_k_in_baci)
+
+filen <- paste0("HS", versions$HS, "-our_ISIC--share.csv")
+file <- here("data", "nomenclatures", filen)
+hs_isic_for_prices <- 
+  read_csv(file) |>
+  as_tibble()
 
 filen <- paste0("nace_2d--nace_2d_name.csv")
 file <- file.path(paths$nomenclatures_p, "NACE", filen)
@@ -66,27 +69,4 @@ isic_2d_dict <-
   rename(isic_2d = code, 
          isic_2d_name = description)
   
-
-filen <- paste0("t-i-j-isic_2d--BACI--V", versions$baci_V, ".fst")
-file <- here("data", filen)
-baci_in_isic_2d <- read_fst(file)
-
-isic__isic_for_prices <- 
-  baci_in_isic_2d |>
-  summarize(.by = isic_2d, 
-            nb_flows = sum(nb_flows),
-            v = sum(v)) |>
-  mutate(across(
-    c(nb_flows, v),
-    ~ .x / sum(.x) * 100,
-    .names = "sh_{.col}")) |>
-  arrange(- sh_nb_flows) |>
-  mutate(isic_2d_aggregated = case_when(  
-    sh_nb_flows < 1 ~ "NED",
-    .default = isic_2d)) |>
-  select(isic_2d, isic_2d_aggregated)
-
 rm(nb_obs_per_isic_2d, distribution_nb_isic_per_hs)
-
-
-  

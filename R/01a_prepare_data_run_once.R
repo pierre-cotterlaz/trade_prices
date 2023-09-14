@@ -6,19 +6,53 @@ baci_df <-
 # |>
   # mutate(uv = v/q)
 
+# ISIC_2d - our ISIC
+
+filen <- paste0("t-i-j-isic_2d--BACI--V", versions$baci_V, ".fst")
+file <- here("data", filen)
+baci_in_isic_2d <- read_fst(file)
+
+isic__isic_for_prices <- 
+  baci_in_isic_2d |>
+  summarize(.by = isic_2d, 
+            nb_flows = sum(nb_flows),
+            v = sum(v)) |>
+  mutate(across(
+    c(nb_flows, v),
+    ~ .x / sum(.x) * 100,
+    .names = "sh_{.col}")) |>
+  arrange(- sh_nb_flows) |>
+  mutate(isic_2d_aggregated = case_when(  
+    sh_nb_flows < 1 ~ "NED",
+    .default = isic_2d)) |>
+  select(isic_2d, isic_2d_aggregated) |>
+  arrange(isic_2d)
+filen <- paste0("ISIC_2d-our_ISIC.csv")
+file <- here("data", "nomenclatures", filen)
+write_csv(isic__isic_for_prices, file)
+
 # HS - ISIC_2d
 filen <- paste0("HS", versions$HS, "-CPA2_1--share.csv")
 file <- file.path(paths$nomenclatures_p, "conversions", filen)
-hs_isic_df <- 
+hs_isic_df <-
   read_csv(file) |>
   as_tibble() |>
   mutate(isic_2d = substr(CPA2_1, 0, 2)) |>
-  distinct(HS5, isic_2d) |>
-  group_by(HS5) |>
+  distinct(!!k_varname, isic_2d) |>
+  group_by(!!k_varname) |>
   mutate(share = 1 / n()) |>
   ungroup() |>
-  mutate(k = as.numeric(HS5)) |>
+  mutate(k = as.numeric(!!k_varname)) |>
   select(k, isic_2d, share)
+
+hs_isic_for_prices <- 
+  hs_isic_df |>
+  left_join(isic__isic_for_prices, by = "isic_2d") |> 
+  select(k, isic_2d_aggregated, share) 
+filen <- paste0("HS", versions$HS, "-our_ISIC--share.csv")
+file <- here("data", "nomenclatures", filen)
+write_csv(hs_isic_for_prices, file)
+
 
 distribution_nb_isic_per_hs <- 
   hs_isic_df |> 

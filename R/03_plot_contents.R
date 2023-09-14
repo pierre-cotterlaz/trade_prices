@@ -10,19 +10,29 @@ list_methods <-
     ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
     0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE, 
     0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE, 
+    0.05                 , 0.95                 , TRUE     , TRUE             , FALSE                   , FALSE, 
     0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , TRUE
   )
-
-
 
 dict_method_names <-  
   tribble(
     ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~method_name,
     0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE                  , "Raw data",
     0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE                  , "5% unweighted",
-    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "5% weighted",
+    0.05                 , 0.95                 , TRUE     , TRUE             , FALSE                   , FALSE                  , "5% weighted",
     0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , TRUE                   , "5% unweighted, infer missing uv"
+  )
+
+list_methods <-  
+  tribble(
+    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
+    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE 
+  )
+
+dict_method_names <-  
+  tribble(
+    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~method_name,
+    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE                  , "Raw data"
   )
 
 first_year <- 2017
@@ -58,6 +68,7 @@ open_csv <-
     # Intermediary dataset from 02_compute_price_indices
     filen <- paste0(
       "t--delta_ln_price_index--", 
+      "HS_", versions$HS,
       "-lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
       "-weighted_", weighted,
@@ -267,14 +278,15 @@ make_graph_stade <- function(stade_select){
   graph <- 
     graph_df |> 
     filter(stade == stade_select) |>
-    ggplot(aes(x = t, y = price_index, colour = method_name)) +
+    ggplot(aes(x = t, y = price_index, 
+               colour = method_name, shape = method_name)) +
     geom_line() +
     geom_point() +
     geom_hline(yintercept = 100) +
     labs(
       title = stade_select,
       x = element_blank(),
-      y = "Price index (100 = )"
+      y = paste0("Price index (100 = ", first_year, ")")
     ) +
     theme(
       legend.title = element_blank()
