@@ -1,21 +1,32 @@
 
-# 
+#' Create a tibble with delta_ln_uv
+#' @param source_data BACI or WTFC
+#' @param infer_missing_uv_before TRUE if missing values have to be filled in 
+#' @return a tibble with delta_ln_uv
 create_delta_ln_uv_data <- function(
-    infer_missing_uv_before){
-  
-  if (infer_missing_uv_before == FALSE){
-    filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
-    file <- file.path(paths$baci_p, "Data", versions$baci_V, filen)
+    infer_missing_uv_before,
+    source_data = "baci"){
+  if (source_data == "wtfc"){
+    filen <- paste0("t-i-j-k--WTFC--HS", versions$HS, "-V", versions$wtfc_V, ".fst")
+    file <- file.path(paths$wtfc_p, "Data", versions$wtfc_V, filen)
     baci_df <- 
-      read_fst(file) |>
-      mutate(uv = v / q)
-    
+      read_fst(file) 
   }
-  if (infer_missing_uv_before == TRUE){
-    filen <- paste0("t-i-j-k--uv--infered_from_k_4d--V", versions$baci_V, ".fst")
-    file <- here("data", "intermediary", filen)
-    baci_df <- 
-      read_fst(file)
+  if (source_data == "baci"){
+    if (infer_missing_uv_before == FALSE){
+      filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
+      file <- file.path(paths$baci_p, "Data", versions$baci_V, filen)
+      baci_df <- 
+        read_fst(file) |>
+        mutate(uv = v / q)
+      
+    }
+    if (infer_missing_uv_before == TRUE){
+      filen <- paste0("t-i-j-k--uv--infered_from_k_4d--V", versions$baci_V, ".fst")
+      file <- here("data", "intermediary", filen)
+      baci_df <- 
+        read_fst(file)
+    }
   }
   
   lagged_baci_df <- 
@@ -36,7 +47,12 @@ create_delta_ln_uv_data <- function(
   return(delta_ln_uv_df)
 }
 
-replace_missing_delta_ln_uv <- function(input_df, infer_missing_uv_after){
+#' Replace missing delta log uv after the filtering of extreme values
+#' @param input_df tibble with filtered d_ln_uv
+#' @param infer_missing_uv_after TRUE if missing values have to be filled in 
+#' @return a tibble ready to be used for price index computations
+replace_missing_delta_ln_uv_after_filtering <-
+  function(input_df, infer_missing_uv_after){
   
   if (infer_missing_uv_after == TRUE) {
     filtered_df <- 
@@ -87,40 +103,22 @@ replace_missing_delta_ln_uv <- function(input_df, infer_missing_uv_after){
       input_df 
   }
   return(missing_uv_replaced_df)
-}
+  }
 
-# Remove outliers 
-# We remove the outliers on a dataset that has the correct t-i-j-k structure
-# not the dataset with group variables which has more rows than t-i-j-k
-remove_outliers <- 
-  function(lb_percentile_filter, 
-         ub_percentile_filter,
-         weighted,
-         replace_outliers,
-         infer_missing_uv_before,
-         infer_missing_uv_after) {
-  
-  message("lb_percentile_filter: ", lb_percentile_filter, 
-          ", ub_percentile_filter: ", ub_percentile_filter)
-  message("weighted: ", weighted, 
-          ", replace_outliers: ", replace_outliers)
-  message("infer_missing_uv_before: ", infer_missing_uv_before, 
-          ", infer_missing_uv_after: ", infer_missing_uv_after)
-  message("=================================================")
-
-  delta_ln_uv_df <- create_delta_ln_uv_data(
-    infer_missing_uv_before = infer_missing_uv_before) 
-  
+remove_outliers <- function(
+    input_df, 
+    weighted,
+    replace_by_centiles){
   if (weighted == FALSE){
     filtered_df <- 
-      delta_ln_uv_df |>
+      input_df |>
       group_by(t, k) |>
       mutate(outlier = !between(
         delta_ln_uv, 
         quantile(delta_ln_uv, lb_percentile_filter),
         quantile(delta_ln_uv, ub_percentile_filter))) |>
       ungroup()
-    if (replace_outliers == TRUE) {
+    if (replace_by_centiles == TRUE) {
       filtered_df <- 
         filtered_df |>
         group_by(t, k) |>
@@ -132,8 +130,8 @@ remove_outliers <-
           .default = delta_ln_uv
         )) |>
         ungroup()
-      }
-    if (replace_outliers == FALSE){
+    }
+    if (replace_by_centiles == FALSE){
       filtered_df <- 
         filtered_df |> 
         filter(outlier == FALSE)
@@ -141,7 +139,7 @@ remove_outliers <-
   }
   if (weighted == TRUE){
     filtered_df <- 
-      delta_ln_uv_df |>
+      input_df |>
       filter(!is.na(delta_ln_uv)) |>
       group_by(t, k) |>
       mutate(`t-k--v` = sum(v, na.rm = T),
@@ -153,7 +151,7 @@ remove_outliers <-
       arrange(t, k, delta_ln_uv) |>
       mutate(`t-k--cum_sh_w` = cumsum(sh_w)) |>
       ungroup()
-    if (replace_outliers == FALSE) {
+    if (replace_by_centiles == FALSE) {
       filtered_df <-
         filtered_df |> 
         group_by(t, k) |>
@@ -163,7 +161,7 @@ remove_outliers <-
           ub_percentile_filter)) |>
         ungroup() 
     }
-    if (replace_outliers == TRUE) {
+    if (replace_by_centiles == TRUE) {
       filtered_df <- 
         filtered_df |>
         mutate(lb_delta_ln_uv = case_when( 
@@ -188,14 +186,48 @@ remove_outliers <-
           .default = delta_ln_uv
         )) |> 
         select(t, i, j, k, delta_ln_uv, v, l_v)
+      
     }
   }
+  return(filtered_df)
+}
+
+# Remove outliers 
+# We remove the outliers on a dataset that has the correct t-i-j-k structure
+# not the dataset with group variables which has more rows than t-i-j-k
+prepare_data_for_price_indices <- 
+  function(lb_percentile_filter, 
+         ub_percentile_filter,
+         weighted,
+         replace_by_centiles,
+         infer_missing_uv_before,
+         infer_missing_uv_after,
+         source_data = "baci") {
+  message("source_data: ", source_data)
+  message("lb_percentile_filter: ", lb_percentile_filter, 
+          ", ub_percentile_filter: ", ub_percentile_filter)
+  message("weighted: ", weighted, 
+          ", replace_outliers: ", replace_outliers)
+  message("infer_missing_uv_before: ", infer_missing_uv_before, 
+          ", infer_missing_uv_after: ", infer_missing_uv_after)
+  message("=================================================")
+
+  delta_ln_uv_df <- create_delta_ln_uv_data(
+    source_data = source_data, 
+    infer_missing_uv_before = infer_missing_uv_before) 
+  
+  # remove outliers 
+  filtered_df <- 
+    remove_outliers(
+      input_df = delta_ln_uv_df,
+      weighted = weighted,
+      replace_by_centiles = replace_by_centiles)
+  
   # replace missing delta_ln_uv
   missing_uv_replaced_df <- 
-    replace_missing_delta_ln_uv(
+    replace_missing_delta_ln_uv_after_filtering(
       input_df = filtered_df,
-      infer_missing_uv_after = infer_missing_uv_after
-)
+      infer_missing_uv_after = infer_missing_uv_after)
   
   missing_uv_replaced_df <- 
     missing_uv_replaced_df |>
@@ -204,10 +236,11 @@ remove_outliers <-
   # save file
   filen <- paste0("filtered_data--",
                   "HS_", versions$HS,
+                  "-source_data_", source_data, 
                   "-lb_perc_", lb_percentile_filter, 
                   "-ub_perc_", ub_percentile_filter,
                   "-weighted_", weighted,
-                  "-replace_outliers_", replace_outliers, 
+                  "-replace_outliers_", replace_by_centiles, 
                   "-infer_missing_uv_before_", infer_missing_uv_before, 
                   "-infer_missing_uv_after_", infer_missing_uv_after, ".fst")
   file <- here("data", "intermediary", filen)
@@ -222,8 +255,7 @@ compute_price_index <-
   function(
     df_with_group_variables, 
     raw_baci_with_group_variables, 
-    aggregation_level
-){
+    aggregation_level){
   aggregation_level_str <- deparse(substitute(aggregation_level))
   price_df <- 
     df_with_group_variables |>
@@ -246,12 +278,17 @@ compute_price_index <-
 }
 
 save_csv_files_price_index <- 
-  function(lb_percentile_filter, 
-           ub_percentile_filter,
-           weighted,
-           replace_outliers,
-           infer_missing_uv_before,
-           infer_missing_uv_after) {
+  function(
+    sector_classification = "isic",
+    source_data = "baci",
+    lb_percentile_filter,
+    ub_percentile_filter,
+    weighted,
+    replace_outliers,
+    infer_missing_uv_before,
+    infer_missing_uv_after) {
+    message("sector_classification: ", sector_classification,
+            ", source_data: ", source_data)
     message("lb_percentile_filter: ", lb_percentile_filter, 
             ", ub_percentile_filter: ", ub_percentile_filter)
     message("weighted: ", weighted, 
@@ -263,12 +300,14 @@ save_csv_files_price_index <-
     #message("Creating dataset with group variables")
     filen <- paste0("filtered_data--",
                     "HS_", versions$HS,
+                    "-source_data_", source_data, 
                     "-lb_perc_", lb_percentile_filter, 
                     "-ub_perc_", ub_percentile_filter,
                     "-weighted_", weighted,
                     "-replace_outliers_", replace_outliers, 
                     "-infer_missing_uv_before_", infer_missing_uv_before, 
                     "-infer_missing_uv_after_", infer_missing_uv_after, ".fst")
+
     file <- here("data", "intermediary", filen)
     df_with_group_variables  <- 
       read_fst(file) |>
@@ -281,7 +320,7 @@ save_csv_files_price_index <-
       mutate(v = v * share, l_v = l_v * share) |>
       select(-share) |>
       mutate(
-        t_k = paste(t, k),
+        # t_k = paste(t, k),
         t_isic = paste(t, isic_2d_aggregated),
         t_stade = paste(t, stade),
         t_isic_stade = paste(t, isic_2d_aggregated, stade)
@@ -295,13 +334,15 @@ save_csv_files_price_index <-
 # suffix for csv filenames containing the price indices
     end_of_filenames <- paste0(
       "HS_", versions$HS,
-      "-sector_classification", sector_classification, 
+      "-source_data_", source_data, 
+      "-sectors_", sector_classification, 
       "-lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
-      "-weighted_", weighted,
-      "-replace_outliers_", replace_outliers, 
-      "-infer_missing_uv_before_", infer_missing_uv_before, 
-      "-infer_missing_uv_after_", infer_missing_uv_after, ".csv"
+      "-weighted_", as.character(as.numeric(weighted)),
+      "-replace_outliers_", as.character(as.numeric(replace_outliers)), 
+      "-infer_missing_uv_before_", as.character(as.numeric(infer_missing_uv_before)), 
+      "-infer_missing_uv_after_", as.character(as.numeric(infer_missing_uv_after)), 
+      ".csv"
     )
 
     # message("Computing year price index")

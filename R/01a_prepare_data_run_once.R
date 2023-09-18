@@ -6,6 +6,38 @@ baci_df <-
 # |>
   # mutate(uv = v/q)
 
+
+filen <- paste0("t-i-j-k--WTFC--HS1-DM201901.Rds")
+file <- file.path(paths$wtfc_p, "Data", versions$wtfc_V, filen)
+message(file.info(file)$mtime) 
+wtfc_df <- 
+  readRDS(file)
+df <- 
+  wtfc_df |>
+  select(t, i, j, k, uv) |>
+  mutate(k = as.numeric(k))
+filen <- paste0("t-i-j-k--WTFC--HS", versions$HS, "-V201901.fst")
+file <- file.path(paths$wtfc_p, "Data", "201901", filen)
+write_fst(df, file, compress = 100)
+
+filen <- paste0("t-i-j-k--WTFC--HS1-V202005b.Rds")
+file <- file.path(paths$wtfc_p, "Data", "202005b", filen)
+message(file.info(file)$mtime) 
+wtfc_df <- 
+  readRDS(file) |>
+  select(t, i, j, k, v, uv) |>
+  mutate(k = as.numeric(k))
+filen <- paste0("t-i-j-k--WTFC--HS", versions$HS, "-V202005b.fst")
+file <- file.path(paths$wtfc_p, "Data", "202005b", filen)
+write_fst(wtfc_df, file, compress = 100)
+
+
+filen <- paste0("t-i-j-k--WTFC--HS", versions$HS, "-V", versions$wtfc_V, ".fst")
+file <- file.path(paths$wtfc_p, "Data", versions$wtfc_V, filen)
+tmp <- read_fst(file)
+tmp2 <- tmp |>
+  distinct(t)
+
 # * nomenclatures --------------------------------------------------------
 
 # ISIC_2d - our ISIC
