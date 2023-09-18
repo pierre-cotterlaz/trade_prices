@@ -24,19 +24,19 @@ dict_method_names <-
     0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , TRUE                   , "5% unweighted, infer missing uv"
   )
 
-list_methods <-  
-  tribble(
-    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
-    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE                  ,
-    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE                  
-  )
-
-dict_method_names <-  
-  tribble(
-    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~method_name,
-    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE                  , "Raw data",
-    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE                  , "5% unweighted"
-  )
+# list_methods <-  
+#   tribble(
+#     ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
+#     0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE                  ,
+#     0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE                  
+#   )
+# 
+# dict_method_names <-  
+#   tribble(
+#     ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~method_name,
+#     0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE                  , "Raw data",
+#     0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE                  , "5% unweighted"
+#   )
 
 # * Over time -------------------------------------------------------------
 

@@ -154,6 +154,41 @@ filen <- paste0("t-i-j-k--BACI_with_group_variables--HS", versions$HS, "-V", ver
 file <- here("data", "intermediary", filen)
 write_fst(raw_baci_with_group_variables, file, compress = 100)
 
+filen <- paste0("HS", versions$HS, "-branches_for_prices--share.csv")
+file <- here("data", "nomenclatures", filen)
+hs_branch_for_prices <- 
+  read_csv(file) |>
+  as_tibble()
+hs_isic_for_prices <- 
+  hs_branch_for_prices |>
+  rename(isic_2d_aggregated = branch_for_price) 
+filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
+file <- file.path(paths$pc_baci_p, "Data", versions$baci_V, filen)
+raw_baci_with_group_variables  <- 
+  read_fst(file)  |>
+  mutate(k = as.numeric(k)) |>
+  left_join(hs_isic_for_prices, by = "k") |>
+  # NB because HS codes may be associated with several ISIC codes
+  # the dataset will have more rows than defined by t-i-j-k but 
+  # the total trade flow will remain correct
+  mutate(v = v * share) |>
+  select(-share) |>
+  left_join(hs_stade_df, by = "k") |>
+  mutate(v = v * share) |>
+  select(-share) |>
+  mutate(
+    #t_k = as.factor(paste(t, k)),
+    t_isic = as.factor(paste(t, isic_2d_aggregated)),
+    t_stade = as.factor(paste(t, stade)),
+    t_isic_stade = as.factor(paste(t, isic_2d_aggregated, stade))
+  ) 
+filen <- paste0("t-i-j-k--BACI_with_group_variables--HS", 
+                versions$HS, "-V", versions$baci_V, 
+                "-cepii_nomenclature.fst")
+file <- here("data", "intermediary", filen)
+write_fst(raw_baci_with_group_variables, file, compress = 100)
+
+
 
 # delta_ln_uv computed at much aggregated levels 
 filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")

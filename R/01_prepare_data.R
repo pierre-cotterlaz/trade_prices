@@ -16,11 +16,6 @@ list_k_in_baci <-
 
 # Concordance tables ------------------------------------------------------
 
-# filen <- paste0("HS", versions$HS, "-branch--share--fil_santé.csv")
-# file <- file.path(paths$nomenclatures_p, "Conversions", filen)
-# df <- 
-#   read_csv(file)
-
 k_varname <- sym(paste0("HS", versions$HS))
 k_varname_str <- paste0("HS", versions$HS)
 

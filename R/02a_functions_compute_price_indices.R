@@ -286,13 +286,16 @@ save_csv_files_price_index <-
         t_stade = paste(t, stade),
         t_isic_stade = paste(t, isic_2d_aggregated, stade)
       ) 
-    # tmp <- 
-    #   df_with_group_variables |>
-    #   arrange(v)
-    #   filter(is.na(v) | is.na(l_v) | is.na(delta_ln_uv))
-
+    if (sector_classification == "cepii"){
+      df_with_group_variables <- 
+        df_with_group_variables |>
+        filter(manuf == 1)
+    }
+    
+# suffix for csv filenames containing the price indices
     end_of_filenames <- paste0(
       "HS_", versions$HS,
+      "-sector_classification", sector_classification, 
       "-lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
       "-weighted_", weighted,

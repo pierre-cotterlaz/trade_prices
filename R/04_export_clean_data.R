@@ -30,14 +30,13 @@ aggregate_data <-
   mutate(
     trade_value_base_100 = (v / v[t == first_year]) * 100,
     trade_volume_base_100 = trade_value_base_100 / price_index * 100) |>
-  mutate(aggregation_level = "Year",
-         yearly_change_price_index = exp(delta_ln_price_index)) |>
+  mutate(aggregation_level = "Year") |>
   rename(year = t, 
          trade_value_dollars = v,
          price_index_base_100 = price_index) |>
   mutate(across(c(where(is.numeric), - trade_value_dollars), ~ round(.x, digits = 4))) |>
   mutate(trade_value_dollars = round(trade_value_dollars, digits = 3)) |>
-  select(aggregation_level, year, yearly_change_price_index,
+  select(aggregation_level, year,
          price_index_base_100, trade_value_dollars, trade_value_base_100,
          trade_volume_base_100)
 filen <- paste0(
@@ -58,15 +57,14 @@ stade_data <-
     trade_value_base_100 = (v / v[t == first_year]) * 100,
     trade_volume_base_100 = trade_value_base_100 / price_index * 100) |>
   ungroup() |>
-  mutate(aggregation_level = "Year x Production stage",
-         yearly_change_price_index = exp(delta_ln_price_index)) |>
+  mutate(aggregation_level = "Year x Production stage") |>
   rename(year = t, 
          production_stage = stade,
          trade_value_dollars = v,
          price_index_base_100 = price_index) |>
   mutate(across(c(where(is.numeric), - trade_value_dollars), ~ round(.x, digits = 4))) |>
   mutate(trade_value_dollars = round(trade_value_dollars, digits = 3)) |>
-  select(aggregation_level, year, production_stage, yearly_change_price_index,
+  select(aggregation_level, year, production_stage,
          price_index_base_100, trade_value_dollars, trade_value_base_100,
          trade_volume_base_100)
 filen <- paste0(
@@ -87,8 +85,7 @@ isic_data <-
     trade_value_base_100 = (v / v[t == first_year]) * 100,
     trade_volume_base_100 = trade_value_base_100 / price_index * 100) |>
   ungroup() |>
-  mutate(aggregation_level = "Year x ISIC",
-         yearly_change_price_index = exp(delta_ln_price_index)) |>
+  mutate(aggregation_level = "Year x ISIC") |>
   rename(year = t, 
          trade_value_dollars = v,
          price_index_base_100 = price_index) |>
@@ -97,7 +94,7 @@ isic_data <-
   mutate(trade_value_dollars = round(trade_value_dollars, digits = 3)) |>
   left_join(isic_2d_dict, by = c("isic" = "isic_2d")) |>
   rename(isic_name = isic_2d_name) |>
-  select(aggregation_level, year, isic, isic_name, yearly_change_price_index,
+  select(aggregation_level, year, isic, isic_name,
          price_index_base_100, trade_value_dollars, trade_value_base_100,
          trade_volume_base_100)
 filen <- paste0(
@@ -118,8 +115,7 @@ isic_stade_data <-
     trade_value_base_100 = (v / v[t == first_year]) * 100,
     trade_volume_base_100 = trade_value_base_100 / price_index * 100) |>
   ungroup() |>
-  mutate(aggregation_level = "Year x ISIC x Production stage",
-         yearly_change_price_index = exp(delta_ln_price_index)) |>
+  mutate(aggregation_level = "Year x ISIC x Production stage") |>
   rename(year = t, 
          production_stage = stade, 
          trade_value_dollars = v,
@@ -130,13 +126,12 @@ isic_stade_data <-
   left_join(isic_2d_dict, by = c("isic" = "isic_2d")) |>
   rename(isic_name = isic_2d_name) |>
   select(aggregation_level, year, isic, production_stage,
-         yearly_change_price_index,
          price_index_base_100, trade_value_dollars, trade_value_base_100,
          trade_volume_base_100, isic_name)
 filen <- paste0(
   "price_indices_by_isic_production_stage__v_", versions$trade_price_V, ".csv")
 file <- here("data", "final", versions$trade_price_V, filen)
-write_csv(isic_data, file)
+write_csv(isic_stade_data, file)
 
 # * Create zip file -------------------------------------------------------
 
