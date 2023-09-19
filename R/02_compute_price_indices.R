@@ -3,35 +3,22 @@
 
 list_arguments <- 
   tribble(
-    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
-    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , TRUE     , TRUE             , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , TRUE
-  )
-
-list_arguments <- 
-  tribble(
-    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
-    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE, 
-  )
-
-list_arguments <- 
-  tribble(
-    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data,
-    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "baci",
-    0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "baci",
-    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "wtfc",
-    0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "wtfc"
+    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_by_centiles, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data,
+    0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "baci",
+    0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "baci",
+    0.075                , 0.925                , TRUE     , FALSE               , FALSE                   , FALSE                  , "baci",
+    0.075                , 0.925                , FALSE    , FALSE               , FALSE                   , FALSE                  , "baci",
+    0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "wtfc",
+    0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "wtfc",
+    0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "both",
+    0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "both"
   )
 
 list_arguments <- 
   list_arguments |>
-  filter(source_data == "baci")
+  filter(source_data == "both")
 
 pwalk(list_arguments, prepare_data_for_price_indices)
-
 
 sector_classification <- "isic"
 source_data <- "baci"

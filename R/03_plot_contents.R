@@ -191,25 +191,13 @@ open_csv <-
     return(df)
   }
 
-# list_methods <- 
-#   tribble(
-#     ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data, ~sector_classification,
-#     0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic",
-#     0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic"
-#   )
-# 
-# dict_method_names <- 
-#   tribble(
-#     ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data, ~sector_classification, ~method_name,
-#     0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic"                , "5% weighted",
-#     0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic"                , "5% unweighted"
-#   )
-
 list_methods <- 
   tribble(
     ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data, ~sector_classification,
     0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic", 
     0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic", 
+    0.075                , 0.925                , TRUE     , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic", 
+    0.075                , 0.925                , FALSE    , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic", 
     0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic",
     0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic"     
   )
@@ -219,6 +207,8 @@ dict_method_names <-
     ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data, ~sector_classification, ~method_name,
     0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic"                , "baci 5% weighted",
     0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic"                , "baci 5% unweighted",
+    0.075                , 0.925                , TRUE     , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic"                , "baci 7.5% weighted",
+    0.075                , 0.925                , FALSE    , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic"                , "baci 7.5% unweighted",
     0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic"                , "wtfc 5% weighted",
     0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic"                , "wtfc 5% unweighted"
   )
@@ -287,7 +277,7 @@ make_graph_price_index_over_time <-
 
 list_graphs <-
   list_stades |>
-  map(\(x) make_graph_price_index_over_time(x, method_select = "5% weighted"))
+  map(\(x) make_graph_price_index_over_time(x, method_select = "wtfc 5% weighted"))
 list_graphs[[1]]
 pdf(
   file = here("output",
@@ -378,13 +368,14 @@ make_graph_price_index_all_stades <- function(method_name_select){
     slice_max(order_by = t, n = 1) 
   graph <- 
     graph_df |>
+    filter(method_name == method_name_select) |>
     filter(!is.na(price_index)) |>
     select(t, stade, starts_with("price_index")) |>
     pivot_longer(cols = starts_with("price_index"), 
                  names_to = "type", 
                  values_to = "trade") |>
     filter(type == "price_index") |>
-    filter(stade != "6_NEC") |>
+    filter(stade != "6_NEC")  |>
     ggplot(aes(x = t, y = trade, colour = stade, shape = stade)) +
     geom_line() +
     geom_point() +
@@ -393,7 +384,7 @@ make_graph_price_index_all_stades <- function(method_name_select){
     labs(
       title = method_name_select,
       x = element_blank(),
-      y = paste0("Trade volume (100 = ", first_year, ")")
+      y = paste0("Price index (100 = ", first_year, ")")
     ) +
     theme(
       legend.position = "null"
@@ -401,7 +392,7 @@ make_graph_price_index_all_stades <- function(method_name_select){
   return(graph)
 }
 list_graphs <-
-  map(list_method_names, make_graph_trade_volume_all_stades)
+  map(list_method_names, make_graph_price_index_all_stades)
 list_graphs[[1]]
 pdf(
   file = here(
@@ -436,18 +427,13 @@ make_graph_price_index_compare_methodologies <- function(stade_select){
       legend.title = element_blank()
     ) 
   }
-stade_select <- "3_PC"
-graph <- make_graph_stade(stade_select)
-plot(graph)
-
 list_graphs <-
   map(list_stades, make_graph_stade)
-list_graphs[[1]]
-
 pdf(
   file = here(
     "output", "figures",
-    glue("price_index_by_stade_over_time__different_methodologies__hs{versions$HS}.pdf")
+    paste0("price_index_by_stade_over_time__different_methodologies__hs", 
+           versions$HS, ".pdf")
   ),
   width = 7, height = 5, onefile = TRUE
 )
@@ -456,9 +442,6 @@ walk(
   \(i) plot(list_graphs[[i]])
 )
 dev.off()
-
-
-make_graph_trade_volume_compare_methodologies 
 
 graph <- 
   graph_df |> 
@@ -481,12 +464,15 @@ plot(graph)
 filen <- paste0(
   "t-isic_2d--delta_ln_price_index--", 
   "HS_", versions$HS,
+  "-source_data_", source_data, 
+  "-sectors_", sector_classification, 
   "-lb_perc_", lb_percentile_filter, 
   "-ub_perc_", ub_percentile_filter,
-  "-weighted_", weighted,
-  "-replace_outliers_", replace_outliers, 
-  "-infer_missing_uv_before_", infer_missing_uv_before, 
-  "-infer_missing_uv_after_", infer_missing_uv_after, ".csv")
+  "-weighted_", as.character(as.numeric(weighted)),
+  "-replace_outliers_", as.character(as.numeric(replace_outliers)), 
+  "-infer_missing_uv_before_", as.character(as.numeric(infer_missing_uv_before)), 
+  "-infer_missing_uv_after_", as.character(as.numeric(infer_missing_uv_after)), 
+  ".csv")
 file <- here("data", "intermediary", filen)
 graph_df <- 
   read_csv(file) |> 
@@ -494,7 +480,8 @@ graph_df <-
   mutate(
     trade_value_base100 = (v / v[t == first_year]) * 100,
     trade_volume_base100 = trade_value_base100 / price_index) |>
-  ungroup()
+  ungroup() |>
+  filter(!is.na(price_index))
 
 make_graph_isic <- function(isic_select){
   isic_2d_name_str <- 
@@ -561,7 +548,9 @@ dev.off()
 # Compare different methodologies
 
 open_csv <- 
-  function(lb_percentile_filter, 
+  function(source_data, 
+           sector_classification,
+           lb_percentile_filter, 
            ub_percentile_filter, 
            weighted, 
            replace_outliers, 
@@ -570,17 +559,22 @@ open_csv <-
     filen <- paste0(
       "t-isic_2d--delta_ln_price_index--", 
       "HS_", versions$HS,
+      "-source_data_", source_data, 
+      "-sectors_", sector_classification, 
       "-lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
-      "-weighted_", weighted,
-      "-replace_outliers_", replace_outliers, 
-      "-infer_missing_uv_before_", infer_missing_uv_before, 
-      "-infer_missing_uv_after_", infer_missing_uv_after, ".csv")
+      "-weighted_", as.character(as.numeric(weighted)),
+      "-replace_outliers_", as.character(as.numeric(replace_outliers)), 
+      "-infer_missing_uv_before_", as.character(as.numeric(infer_missing_uv_before)), 
+      "-infer_missing_uv_after_", as.character(as.numeric(infer_missing_uv_after)), 
+      ".csv")
     file <- here("data", "intermediary", filen)
     df <- 
       read_csv(file) |>
       as_tibble() |>
-      mutate(lb_percentile_filter = lb_percentile_filter,
+      mutate(source_data = source_data, 
+             sector_classification = sector_classification, 
+             lb_percentile_filter = lb_percentile_filter,
              ub_percentile_filter = ub_percentile_filter,
              weighted = weighted,
              replace_outliers = replace_outliers,
@@ -593,7 +587,9 @@ graph_df <-
   pmap(list_methods, open_csv) |>
   list_rbind() |>
   left_join(dict_method_names,
-            by = c("lb_percentile_filter", 
+            by = c("source_data", 
+                   "sector_classification",
+                   "lb_percentile_filter", 
                    "ub_percentile_filter", 
                    "weighted",
                    "replace_outliers",
@@ -648,8 +644,8 @@ pdf(
   file = here(
     "output",
     "figures",
-    glue("price_index_by_isic_2d_over_time__different_methodologies__hs{versions$HS}.pdf"
-  )),
+    paste0("price_index_by_isic_2d_over_time__different_methodologies__hs", 
+           versions$HS, ".pdf")),
   width = 7, height = 5, onefile = TRUE
 )
 walk(

@@ -1,22 +1,42 @@
 
 #' Create a tibble with delta_ln_uv
-#' @param source_data BACI or WTFC
+#' @param source_data BACI, WTFC or both
 #' @param infer_missing_uv_before TRUE if missing values have to be filled in 
 #' @return a tibble with delta_ln_uv
 create_delta_ln_uv_data <- function(
     infer_missing_uv_before,
     source_data = "baci"){
+  
   if (source_data == "wtfc"){
-    filen <- paste0("t-i-j-k--WTFC--HS", versions$HS, "-V", versions$wtfc_V, ".fst")
+    filen <- paste0("t-i-j-k--v-uv--HS", versions$HS, "-V", versions$wtfc_V, ".fst")
     file <- file.path(paths$wtfc_p, "Data", versions$wtfc_V, filen)
-    baci_df <- 
+    source_df <- 
       read_fst(file) 
   }
+  
+  if (source_data == "both"){
+    filen <- paste0("t-i-j-k--v-uv--HS", versions$HS, "-V", versions$wtfc_V, ".fst")
+    file <- file.path(paths$wtfc_p, "Data", versions$wtfc_V, filen)
+    wtfc_df <- 
+      read_fst(file) 
+    
+    filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
+    file <- file.path(paths$baci_p, "Data", versions$baci_V, filen)
+    baci_df <- 
+      read_fst(file) |>
+      mutate(uv = v / q) |>
+      filter(t >= 2020)
+    
+    source_df <-
+      bind_rows(wtfc_df, baci_df)
+    rm(wtfc_df, baci_df)
+  }
+  
   if (source_data == "baci"){
     if (infer_missing_uv_before == FALSE){
       filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
       file <- file.path(paths$baci_p, "Data", versions$baci_V, filen)
-      baci_df <- 
+      source_df <- 
         read_fst(file) |>
         mutate(uv = v / q)
       
@@ -24,20 +44,20 @@ create_delta_ln_uv_data <- function(
     if (infer_missing_uv_before == TRUE){
       filen <- paste0("t-i-j-k--uv--infered_from_k_4d--V", versions$baci_V, ".fst")
       file <- here("data", "intermediary", filen)
-      baci_df <- 
+      source_df <- 
         read_fst(file)
     }
   }
   
-  lagged_baci_df <- 
-    baci_df |>
+  lagged_source_df <- 
+    source_df |>
     mutate(t = t + 1) |>
     select(t, i, j, k, v, uv) |>
     rename(l_v = v, l_uv = uv)
   
   delta_ln_uv_df <- 
-    baci_df |>
-    left_join(lagged_baci_df, by = c("t", "i", "j", "k")) |> 
+    source_df |>
+    left_join(lagged_source_df, by = c("t", "i", "j", "k")) |> 
     # Drop if uv missing in t or t-1 since we cannot compute a time variation in this case
     filter(!(is.na(l_uv) | is.na(uv))) |> 
     mutate(delta_ln_uv = log(uv) - log(l_uv)) |>
@@ -107,6 +127,8 @@ replace_missing_delta_ln_uv_after_filtering <-
 
 remove_outliers <- function(
     input_df, 
+    lb_percentile_filter, 
+    ub_percentile_filter, 
     weighted,
     replace_by_centiles){
   if (weighted == FALSE){
@@ -207,7 +229,7 @@ prepare_data_for_price_indices <-
   message("lb_percentile_filter: ", lb_percentile_filter, 
           ", ub_percentile_filter: ", ub_percentile_filter)
   message("weighted: ", weighted, 
-          ", replace_outliers: ", replace_outliers)
+          ", replace_outliers: ", replace_by_centiles)
   message("infer_missing_uv_before: ", infer_missing_uv_before, 
           ", infer_missing_uv_after: ", infer_missing_uv_after)
   message("=================================================")
@@ -220,6 +242,8 @@ prepare_data_for_price_indices <-
   filtered_df <- 
     remove_outliers(
       input_df = delta_ln_uv_df,
+      lb_percentile_filter = lb_percentile_filter, 
+      ub_percentile_filter = ub_percentile_filter, 
       weighted = weighted,
       replace_by_centiles = replace_by_centiles)
   
@@ -284,7 +308,7 @@ save_csv_files_price_index <-
     lb_percentile_filter,
     ub_percentile_filter,
     weighted,
-    replace_outliers,
+    replace_by_centiles,
     infer_missing_uv_before,
     infer_missing_uv_after) {
     message("sector_classification: ", sector_classification,
@@ -292,7 +316,7 @@ save_csv_files_price_index <-
     message("lb_percentile_filter: ", lb_percentile_filter, 
             ", ub_percentile_filter: ", ub_percentile_filter)
     message("weighted: ", weighted, 
-            ", replace_outliers: ", replace_outliers)
+            ", replace_outliers: ", replace_by_centiles)
     message("infer_missing_uv_before: ", infer_missing_uv_before, 
             ", infer_missing_uv_after: ", infer_missing_uv_after)
     message("=================================================")
@@ -304,7 +328,7 @@ save_csv_files_price_index <-
                     "-lb_perc_", lb_percentile_filter, 
                     "-ub_perc_", ub_percentile_filter,
                     "-weighted_", weighted,
-                    "-replace_outliers_", replace_outliers, 
+                    "-replace_outliers_", replace_by_centiles, 
                     "-infer_missing_uv_before_", infer_missing_uv_before, 
                     "-infer_missing_uv_after_", infer_missing_uv_after, ".fst")
 
@@ -339,7 +363,7 @@ save_csv_files_price_index <-
       "-lb_perc_", lb_percentile_filter, 
       "-ub_perc_", ub_percentile_filter,
       "-weighted_", as.character(as.numeric(weighted)),
-      "-replace_outliers_", as.character(as.numeric(replace_outliers)), 
+      "-replace_outliers_", as.character(as.numeric(replace_by_centiles)), 
       "-infer_missing_uv_before_", as.character(as.numeric(infer_missing_uv_before)), 
       "-infer_missing_uv_after_", as.character(as.numeric(infer_missing_uv_after)), 
       ".csv"

@@ -45,7 +45,7 @@ rm(wd)
 versions <- list(
   HS = 1,
   baci_V = "202301",
-  wtfc_V = "202005b",
+  wtfc_V = "202104",
   trade_price_V = "202306")
 
 define_first_year <- function(revision){

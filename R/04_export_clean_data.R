@@ -1,23 +1,27 @@
 
 library(zip)
 
+source_data <- "wtfc"
+sector_classification <- "isic"
 lb_percentile_filter <- 0.05
 ub_percentile_filter <- 0.95
-weighted <- FALSE
-replace_outliers <- TRUE
+weighted <- TRUE
+replace_outliers <- FALSE
 infer_missing_uv_before <- FALSE
 infer_missing_uv_after <- FALSE
 
 end_of_filenames <- paste0(
-  "HS_", versions$HS, 
+  "HS_", versions$HS,
+  "-source_data_", source_data, 
+  "-sectors_", sector_classification, 
   "-lb_perc_", lb_percentile_filter, 
   "-ub_perc_", ub_percentile_filter,
-  "-weighted_", weighted,
-  "-replace_outliers_", replace_outliers, 
-  "-infer_missing_uv_before_", infer_missing_uv_before, 
-  "-infer_missing_uv_after_", infer_missing_uv_after, ".csv"
+  "-weighted_", as.character(as.numeric(weighted)),
+  "-replace_outliers_", as.character(as.numeric(replace_outliers)), 
+  "-infer_missing_uv_before_", as.character(as.numeric(infer_missing_uv_before)), 
+  "-infer_missing_uv_after_", as.character(as.numeric(infer_missing_uv_after)),
+  ".csv"
 )
-
 
 # * Year level ------------------------------------------------------------
 
