@@ -61,6 +61,12 @@ rm(hs_branch, share_obs_by_branch, branch__branch_price)
 
 # * Compute price indices -------------------------------------------------
 
+filen <- paste0("HS", versions$HS, "-branches_for_prices--share.csv")
+file <- here("data", "nomenclatures", filen)
+hs_branch_for_prices <- 
+  read_csv(file) |>
+  as_tibble()
+
 # On "déguise" hs_branch en hs_isic pour pouvoir l'utiliser comme argument de la fonction
 hs_isic_for_prices <- 
   hs_branch_for_prices |>
@@ -68,9 +74,20 @@ hs_isic_for_prices <-
 
 list_arguments <- 
   tribble(
-    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
-    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE, 
+    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_by_centiles, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data,
+    0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "baci",
+    0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "baci",
+    0.075                , 0.925                , TRUE     , FALSE               , FALSE                   , FALSE                  , "baci",
+    0.075                , 0.925                , FALSE    , FALSE               , FALSE                   , FALSE                  , "baci",
+    0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "wtfc",
+    0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "wtfc",
+    0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "both",
+    0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "both"
   )
+
+list_arguments <- 
+  list_arguments |>
+  filter(source_data == "both" & weighted == TRUE)
 
 # pwalk(list_arguments, remove_outliers)
 
@@ -87,7 +104,6 @@ raw_baci_with_group_variables <-
 
 sector_classification <- "cepii"
 pwalk(list_arguments, save_csv_files_price_index)
-
 
 # * Plot graphs -----------------------------------------------------------
 

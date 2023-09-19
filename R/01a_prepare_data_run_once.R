@@ -181,10 +181,10 @@ raw_baci_with_group_variables  <-
   mutate(v = v * share) |>
   select(-share) |>
   mutate(
-    t_k = paste(t, k),
-    t_isic = paste(t, isic_2d_aggregated),
-    t_stade = paste(t, stade),
-    t_isic_stade = paste(t, isic_2d_aggregated, stade)
+    # t_k = paste(t, k),
+    t_isic = as.factor(paste(t, isic_2d_aggregated)),
+    t_stade = as.factor(paste(t, stade)),
+    t_isic_stade = as.factor(paste(t, isic_2d_aggregated, stade))
   ) 
 filen <- paste0("t-i-j-k--BACI_with_group_variables--HS", versions$HS, "-V", versions$baci_V, ".fst")
 file <- here("data", "intermediary", filen)

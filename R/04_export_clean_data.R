@@ -38,7 +38,8 @@ aggregate_data <-
   rename(year = t, 
          trade_value_dollars = v,
          price_index_base_100 = price_index) |>
-  mutate(across(c(where(is.numeric), - trade_value_dollars), ~ round(.x, digits = 4))) |>
+  mutate(across(c(where(is.numeric), - trade_value_dollars), 
+                ~ round(.x, digits = 4))) |>
   mutate(trade_value_dollars = round(trade_value_dollars, digits = 3)) |>
   select(aggregation_level, year,
          price_index_base_100, trade_value_dollars, trade_value_base_100,
@@ -66,7 +67,8 @@ stade_data <-
          production_stage = stade,
          trade_value_dollars = v,
          price_index_base_100 = price_index) |>
-  mutate(across(c(where(is.numeric), - trade_value_dollars), ~ round(.x, digits = 4))) |>
+  mutate(across(c(where(is.numeric), - trade_value_dollars), 
+                ~ round(.x, digits = 4))) |>
   mutate(trade_value_dollars = round(trade_value_dollars, digits = 3)) |>
   select(aggregation_level, year, production_stage,
          price_index_base_100, trade_value_dollars, trade_value_base_100,

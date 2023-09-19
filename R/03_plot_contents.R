@@ -6,33 +6,30 @@ theme_set(theme_bw())
 
 # * Lists of possible methodologies ---------------------------------------
 
-list_methods <-  
+list_methods <- 
   tribble(
-    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
-    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , TRUE     , TRUE             , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , TRUE
+    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data, ~sector_classification,
+    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic", 
+    0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic", 
+    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "both"      , "isic", 
+    0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "both"      , "isic", 
+    0.075                , 0.925                , TRUE     , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic", 
+    0.075                , 0.925                , FALSE    , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic", 
+    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic",
+    0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic"     
   )
 
-list_methods <-  
+dict_method_names <- 
   tribble(
-    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, 
-    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , TRUE     , TRUE             , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE, 
-    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , TRUE
-  )
-
-dict_method_names <-  
-  tribble(
-    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~method_name,
-    0                    , 1                    , FALSE    , FALSE            , FALSE                   , FALSE                  , "Raw data",
-    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , FALSE                  , "5% unweighted",
-    0.05                 , 0.95                 , TRUE     , TRUE             , FALSE                   , FALSE                  , "5% weighted",
-    0.05                 , 0.95                 , FALSE    , TRUE             , FALSE                   , TRUE                   , "5% unweighted, infer missing uv"
+    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data, ~sector_classification, ~method_name,
+    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic"                , "baci 5% weighted",
+    0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic"                , "baci 5% unweighted",
+    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "both"      , "isic"                , "both 5% weighted",
+    0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "both"      , "isic"                , "both 5% unweighted",
+    0.075                , 0.925                , TRUE     , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic"                , "baci 7.5% weighted",
+    0.075                , 0.925                , FALSE    , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic"                , "baci 7.5% unweighted",
+    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic"                , "wtfc 5% weighted",
+    0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic"                , "wtfc 5% unweighted"
   )
 
 # * Over time -------------------------------------------------------------
@@ -74,19 +71,6 @@ open_csv <-
     return(df)
   }
 
-list_methods <- 
-  tribble(
-    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data, ~sector_classification,
-    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic",
-    0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic"
-  )
-
-dict_method_names <- 
-  tribble(
-    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data, ~sector_classification, ~method_name,
-    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic"                , "5% weighted",
-    0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic"                , "5% unweighted"
-  )
 
 graph_df <-
   pmap(list_methods, open_csv) |>
@@ -104,16 +88,25 @@ graph_df <-
   mutate(
     price_index = price_index * 100,
     trade_value_base100 = (v / v[t == first_year]) * 100,
-    trade_volume_base100 = trade_value_base100 / price_index) |>
-  ungroup()
+    trade_volume_base100 = trade_value_base100 / price_index * 100) |>
+  ungroup() |>
+  filter(!is.na(price_index)) |>
+  rename(trade_value = v) |> 
+  relocate(trade_value, delta_ln_price_index, price_index, .after = last_col()) |>
+  relocate(trade_value_base100, trade_volume_base100, .after = last_col())
+filen <- paste0("t--price_indices_all_methods.csv")
+file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
+write_csv(graph_df, file)
 
 label_data <-
   graph_df |>
+  filter(source_data != "wtfc") |>
   group_by(method_name) |>
   slice_max(order_by = t, n = 1) 
 
 graph <- 
   graph_df |> 
+  filter(source_data != "wtfc") |>
   ggplot(aes(x = t, y = price_index, 
              colour = method_name, shape = method_name)) +
   geom_line() +
@@ -133,7 +126,39 @@ ggsave(
   filename = here(
     "output",
     "figures",
-    glue("price_index_over_time__different_methodologies__hs{versions$HS}_source_data_wtfc.pdf")
+    paste0("price_index_over_time__different_methodologies__hs", 
+           versions$HS, ".pdf")
+  ),
+  width = 7, height = 5
+) 
+
+label_data <-
+  graph_df |>
+  filter(source_data != "wtfc") |>
+  group_by(method_name) |>
+  slice_max(order_by = t, n = 1) 
+graph <- 
+  graph_df |> 
+  filter(source_data != "wtfc") |>
+  ggplot(aes(x = t, y = trade_volume_base100, 
+             colour = method_name, shape = method_name)) +
+  geom_line() +
+  geom_point() +
+  geom_label_repel(aes(label = method_name), data = label_data) +
+  geom_hline(yintercept = 100) +
+  labs(
+    x = element_blank(),
+    y = paste0("Trade volume (100 = ", first_year, ")")
+  ) +
+  theme(
+    legend.position = "null"
+  ) 
+plot(graph)
+ggsave(
+  filename = here(
+    "output",
+    "figures",
+    paste0("trade_volume_over_time__different_methodologies.pdf")
   ),
   width = 7, height = 5
 ) 
@@ -191,27 +216,6 @@ open_csv <-
     return(df)
   }
 
-list_methods <- 
-  tribble(
-    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data, ~sector_classification,
-    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic", 
-    0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic", 
-    0.075                , 0.925                , TRUE     , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic", 
-    0.075                , 0.925                , FALSE    , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic", 
-    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic",
-    0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic"     
-  )
-
-dict_method_names <- 
-  tribble(
-    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_outliers, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data, ~sector_classification, ~method_name,
-    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic"                , "baci 5% weighted",
-    0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic"                , "baci 5% unweighted",
-    0.075                , 0.925                , TRUE     , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic"                , "baci 7.5% weighted",
-    0.075                , 0.925                , FALSE    , FALSE            , FALSE                   , FALSE                  , "baci"      , "isic"                , "baci 7.5% unweighted",
-    0.05                 , 0.95                 , TRUE     , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic"                , "wtfc 5% weighted",
-    0.05                 , 0.95                 , FALSE    , FALSE            , FALSE                   , FALSE                  , "wtfc"      , "isic"                , "wtfc 5% unweighted"
-  )
 
 graph_df <-
   pmap(list_methods, open_csv) |>
@@ -231,7 +235,13 @@ graph_df <-
     price_index = price_index * 100,
     trade_value_base100 = (v / v[t == first_year]) * 100,
     trade_volume_base100 = trade_value_base100 / price_index * 100) |>
-  ungroup()
+  ungroup() |>
+  rename(trade_value = v) |> 
+  relocate(trade_value, delta_ln_price_index, price_index, .after = last_col()) |>
+  relocate(trade_value_base100, trade_volume_base100, .after = last_col())
+filen <- paste0("t-stade--price_indices_all_methods.csv")
+file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
+write_csv(graph_df, file)
 
 make_graph_price_index_over_time <- 
   function(
@@ -239,6 +249,7 @@ make_graph_price_index_over_time <-
     method_select){
   label_data <-
     graph_df |>
+    filter(source_data != "wtfc") |>
     filter(method_name == method_select) |>
     select(t, stade, starts_with("trade")) |>
     pivot_longer(cols = starts_with("trade"),
@@ -251,6 +262,7 @@ make_graph_price_index_over_time <-
 
   graph <-
     graph_df |>
+    filter(source_data != "wtfc") |>
     filter(method_name == method_select) |>
     select(t, stade, starts_with("trade")) |>
     pivot_longer(cols = starts_with("trade"),
@@ -277,12 +289,17 @@ make_graph_price_index_over_time <-
 
 list_graphs <-
   list_stades |>
-  map(\(x) make_graph_price_index_over_time(x, method_select = "wtfc 5% weighted"))
+  map(\(x) make_graph_price_index_over_time(
+    x, 
+    method_select = "wtfc 5% weighted"
+  ))
 list_graphs[[1]]
 pdf(
   file = here("output",
               "figures",
-              glue("trade_by_stade_over_time__hs{versions$HS}_source_data_{source_data}.pdf")),
+              paste0("trade_by_stade_over_time__hs",
+                     versions$HS, "_source_data_", source_data,
+                     ".pdf")),
   width = 7, height = 5, onefile = TRUE
 )
 walk(
@@ -330,16 +347,13 @@ make_graph_trade_volume_all_stades <- function(method_name_select){
     )
   return(graph)
 }
-method_name <- "baci 5% weighted"
-graph <- 
-  make_graph_trade_volume_all_stades(method_name)
+
 list_method_names <- 
   dict_method_names |>
   distinct(method_name) |>
   pull()
 list_graphs <-
   map(list_method_names, make_graph_trade_volume_all_stades)
-list_graphs[[1]]
 pdf(
   file = here(
     "output", "figures",
@@ -393,7 +407,6 @@ make_graph_price_index_all_stades <- function(method_name_select){
 }
 list_graphs <-
   map(list_method_names, make_graph_price_index_all_stades)
-list_graphs[[1]]
 pdf(
   file = here(
     "output", "figures",
@@ -412,6 +425,7 @@ dev.off()
 make_graph_price_index_compare_methodologies <- function(stade_select){
   graph <- 
     graph_df |> 
+    filter(source_data != "wtfc") |>
     filter(stade == stade_select)|>
     ggplot(aes(x = t, y = price_index, 
                colour = method_name, shape = method_name)) +
@@ -490,6 +504,7 @@ make_graph_isic <- function(isic_select){
     pull(isic_2d_name)
   label_data <-
     graph_df |>
+    
     select(t, isic, starts_with("trade")) |>
     pivot_longer(cols = starts_with("trade"),
                  names_to = "type", 
@@ -532,7 +547,6 @@ list_isic <-
   pull()
 list_graphs <-
   map(list_isic, make_graph_isic)
-list_graphs[[1]]
 
 pdf(
   file = here("output", "figures",
@@ -599,8 +613,14 @@ graph_df <-
   mutate(
     price_index = price_index * 100,
     trade_value_base100 = (v / v[t == first_year]) * 100,
-    trade_volume_base100 = trade_value_base100 / price_index) |>
-  ungroup()
+    trade_volume_base100 = trade_value_base100 / price_index * 100) |>
+  ungroup() |>
+  rename(trade_value = v) |> 
+  relocate(trade_value, delta_ln_price_index, price_index, .after = last_col()) |>
+  relocate(trade_value_base100, trade_volume_base100, .after = last_col())
+filen <- paste0("t-isic--price_indices_all_methods.csv")
+file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
+write_csv(graph_df, file)
 
 make_graph_isic <- function(isic_select){
   isic_2d_name_str <- 
@@ -610,6 +630,7 @@ make_graph_isic <- function(isic_select){
   
   graph <- 
     graph_df |>
+    filter(source_data != "wtfc") |>
     filter(isic == isic_select) |>
     left_join(isic_2d_dict, by = c("isic" = "isic_2d")) |>
     ggplot(aes(x = t, 
@@ -653,3 +674,67 @@ walk(
   \(i) plot(list_graphs[[i]])
 )
 dev.off()
+
+# * By ISIC x stade -------------------------------------------------------
+
+open_csv <- 
+  function(source_data, 
+           sector_classification,
+           lb_percentile_filter, 
+           ub_percentile_filter, 
+           weighted, 
+           replace_outliers, 
+           infer_missing_uv_before, 
+           infer_missing_uv_after) {
+    filen <- paste0(
+      aggregation_level, "--delta_ln_price_index--", 
+      "HS_", versions$HS,
+      "-source_data_", source_data, 
+      "-sectors_", sector_classification, 
+      "-lb_perc_", lb_percentile_filter, 
+      "-ub_perc_", ub_percentile_filter,
+      "-weighted_", as.character(as.numeric(weighted)),
+      "-replace_outliers_", as.character(as.numeric(replace_outliers)), 
+      "-infer_missing_uv_before_", as.character(as.numeric(infer_missing_uv_before)), 
+      "-infer_missing_uv_after_", as.character(as.numeric(infer_missing_uv_after)), 
+      ".csv")
+    file <- here("data", "intermediary", filen)
+    df <- 
+      read_csv(file) |>
+      as_tibble() |>
+      mutate(source_data = source_data, 
+             sector_classification = sector_classification, 
+             lb_percentile_filter = lb_percentile_filter,
+             ub_percentile_filter = ub_percentile_filter,
+             weighted = weighted,
+             replace_outliers = replace_outliers,
+             infer_missing_uv_before = infer_missing_uv_before,
+             infer_missing_uv_after = infer_missing_uv_after) 
+    return(df)
+  }
+
+aggregation_level <- "t-isic_2d-stade"
+graph_df <-
+  pmap(list_methods, open_csv) |>
+  list_rbind() |>
+  left_join(dict_method_names,
+            by = c("source_data", 
+                   "sector_classification",
+                   "lb_percentile_filter", 
+                   "ub_percentile_filter", 
+                   "weighted",
+                   "replace_outliers",
+                   "infer_missing_uv_before",
+                   "infer_missing_uv_after")) |>
+  group_by(isic, method_name) |>
+  mutate(
+    price_index = price_index * 100,
+    trade_value_base100 = (v / v[t == first_year]) * 100,
+    trade_volume_base100 = trade_value_base100 / price_index * 100) |>
+  ungroup() |>
+  rename(trade_value = v) |> 
+  relocate(trade_value, delta_ln_price_index, price_index, .after = last_col()) |>
+  relocate(trade_value_base100, trade_volume_base100, .after = last_col())
+filen <- paste0("t-isic-stade--price_indices_all_methods.csv")
+file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
+write_csv(graph_df, file)

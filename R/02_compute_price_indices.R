@@ -8,6 +8,7 @@ list_arguments <-
     0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "baci",
     0.075                , 0.925                , TRUE     , FALSE               , FALSE                   , FALSE                  , "baci",
     0.075                , 0.925                , FALSE    , FALSE               , FALSE                   , FALSE                  , "baci",
+    0.00                 , 1.00                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "wtfc",
     0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "wtfc",
     0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "wtfc",
     0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "both",
@@ -16,12 +17,12 @@ list_arguments <-
 
 list_arguments <- 
   list_arguments |>
-  filter(source_data == "both")
+  filter(source_data == "baci")
 
 pwalk(list_arguments, prepare_data_for_price_indices)
 
 sector_classification <- "isic"
-source_data <- "baci"
+source_data <- "both"
 lb_percentile_filter <- 0.05
 ub_percentile_filter <- 0.95
 weighted <- TRUE 
@@ -49,8 +50,11 @@ filen <- paste0("t-i-j-k--BACI_with_group_variables--HS",
 file <- here("data", "intermediary", filen)
 raw_baci_with_group_variables <-
   read_fst(file) |>
-  filter(t >= first_year)
+  filter(t >= first_year) |>
+  mutate(across(c(t_isic, t_stade, t_isic_stade),
+                ~ as.character(.x)))
 
 # Compute price index -----------------------------------------------------
 
 pwalk(list_arguments, save_csv_files_price_index)
+

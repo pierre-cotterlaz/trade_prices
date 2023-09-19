@@ -18,7 +18,8 @@ create_delta_ln_uv_data <- function(
     filen <- paste0("t-i-j-k--v-uv--HS", versions$HS, "-V", versions$wtfc_V, ".fst")
     file <- file.path(paths$wtfc_p, "Data", versions$wtfc_V, filen)
     wtfc_df <- 
-      read_fst(file) 
+      read_fst(file) |>
+      mutate(uv = uv / 1E3)
     
     filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
     file <- file.path(paths$baci_p, "Data", versions$baci_V, filen)
