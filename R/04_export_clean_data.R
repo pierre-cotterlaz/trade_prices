@@ -1,7 +1,7 @@
 
 library(zip)
 
-source_data <- "wtfc"
+source_data <- "both_aggregate"
 sector_classification <- "isic"
 lb_percentile_filter <- 0.05
 ub_percentile_filter <- 0.95

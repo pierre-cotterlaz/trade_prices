@@ -31,7 +31,7 @@ $$w_{i,j,k,t} = \frac{1}{2} \left( \frac{v_{i,j,k,t}}{v_{K,t}} + \frac{v_{i,j,k,
 
 Au niveau de chaque produit, les variations de valeur unitaire aberrantes sont remplacées par des valeurs moins aberrantes. Plus précisément, on calcule pour chaque produit la distribution des variations de valeurs unitaires et l'on remplace les variations se situant en deça du 5e centile par la valeur au 5e centile, et les observations au delà du 95e centile par la valeur au 95e centile.
 
-On présente 4 méthodes : 
+Dans un premier temps, nous avons exploré 4 méthodes : 
 
 \begin{enumerate}
 \item Pas de retrait des valeurs aberrantes.
@@ -42,11 +42,15 @@ On présente 4 méthodes :
 
 NB : l'imputation permet de faire apparaître des $d\ln(UV_{i,j,k,t})$ pour des $i,j,k,t$ avec $v_t$ ou $v_{t-1}$ manquant mais on ne les conserve pas.
 
+La troisième méthode a été retenue (filtrage pondéré). Se pose ensuite la question de la source des données : BACI ou WTFC ? 
+
+L'indice de prix ``tous produits'' se rapproche davantage de l'indice de référence (CPB) lorsqu'il est calculé à partir des données de WTFC que lorsqu'il est calculé à partir des données de BACI. On opte donc pour WTFC. Cependant, la base WTFC n'ayant plus vocation à être actualisée, on utilise pour les années les plus récentes (à partir de 2020) des séries d'indices de prix isssues de BACI.
+
 \paragraph{Nomenclature sectorielle:} 
 
 Il s'agit de la nomenclature \href{https://unstats.un.org/unsd/classifications/Econ}{ISIC} à deux chiffres. Pour le moment, la table de passage SH-ISIC est obtenue via une table de passage auparavant mise à disposition par Ramon, mais plus disponible. Un cheminement alternatif serait d'utiliser les tables de passage de l'UNSD. HS96 - CPC1.0 puis CPC1.0 - CPC1.1 puis CPC1.1 - ISIC3.1.
 
-Seuls les secteurs représentant au moins 1\% des flux mondiaux sont conservés, les autres secteurs sont regroupés en un résidu (``NED'').
+Seuls les secteurs représentant au moins 1\% des flux mondiaux sur l'ensemble de la période étudiée (en proportion du nombre d'observations) sont conservés, les autres secteurs sont regroupés en un résidu (``NEC'').
 
 \paragraph{Stades de production:}
 
