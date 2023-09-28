@@ -231,6 +231,34 @@ walk(
 dev.off()
 
 
+#  All manuf products -----------------------------------------------------
+
+aggregation_level <- "t"
+graph_df <-
+  pmap(list_methods, open_csv) |>
+  list_rbind() |>
+  left_join(dict_method_names,
+            by = c("source_data", 
+                   "sector_classification",
+                   "lb_percentile_filter", 
+                   "ub_percentile_filter", 
+                   "weighted",
+                   "replace_by_centiles",
+                   "infer_missing_uv_before",
+                   "infer_missing_uv_after")) |>
+  group_by(method_name) |>
+  mutate(
+    price_index = price_index * 100,
+    trade_value_base100 = (v / v[t == first_year]) * 100,
+    trade_volume_base100 = trade_value_base100 / price_index * 100) |>
+  ungroup() |>
+  rename(trade_value = v) |> 
+  relocate(trade_value, delta_ln_price_index, price_index, .after = last_col()) |>
+  relocate(trade_value_base100, trade_volume_base100, .after = last_col())
+filen <- paste0("t--price_indices_all_methods--cepii_nomenclature.csv")
+file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
+write_csv(graph_df, file)
+
 # By isic -----------------------------------------------------------------
 
 list_methods <- 
@@ -315,6 +343,61 @@ graph <-
 plot(graph)
   
 
+#  By stade --------------------------------------------------------------
+
+aggregation_level <- "t-stade"
+graph_df <-
+  pmap(list_methods, open_csv) |>
+  list_rbind() |>
+  left_join(dict_method_names,
+            by = c("source_data", 
+                   "sector_classification",
+                   "lb_percentile_filter", 
+                   "ub_percentile_filter", 
+                   "weighted",
+                   "replace_by_centiles",
+                   "infer_missing_uv_before",
+                   "infer_missing_uv_after")) |>
+  group_by(stade, method_name) |>
+  mutate(
+    price_index = price_index * 100,
+    trade_value_base100 = (v / v[t == first_year]) * 100,
+    trade_volume_base100 = trade_value_base100 / price_index * 100) |>
+  ungroup() |>
+  rename(trade_value = v) |> 
+  relocate(trade_value, delta_ln_price_index, price_index, .after = last_col()) |>
+  relocate(trade_value_base100, trade_volume_base100, .after = last_col())
+filen <- paste0("t-stade--price_indices_all_methods--cepii_nomenclature.csv")
+file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
+write_csv(graph_df, file)
+
+
+aggregation_level <- "t-isic_2d-stade"
+graph_df <-
+  pmap(list_methods, open_csv) |>
+  list_rbind() |>
+  left_join(dict_method_names,
+            by = c("source_data", 
+                   "sector_classification",
+                   "lb_percentile_filter", 
+                   "ub_percentile_filter", 
+                   "weighted",
+                   "replace_by_centiles",
+                   "infer_missing_uv_before",
+                   "infer_missing_uv_after")) |>
+  group_by(isic, stade, method_name) |>
+  mutate(
+    price_index = price_index * 100,
+    trade_value_base100 = (v / v[t == first_year]) * 100,
+    trade_volume_base100 = trade_value_base100 / price_index * 100) |>
+  ungroup() |>
+  rename(trade_value = v,
+         branch = isic) |> 
+  relocate(trade_value, delta_ln_price_index, price_index, .after = last_col()) |>
+  relocate(trade_value_base100, trade_volume_base100, .after = last_col())
+filen <- paste0("t-isic-stade--price_indices_all_methods--cepii_nomenclature.csv")
+file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
+write_csv(graph_df, file)
 
 # * Export csv ------------------------------------------------------------
 

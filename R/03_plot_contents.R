@@ -163,6 +163,74 @@ ggsave(
   width = 7, height = 5
 ) 
 
+
+# * By manuf over time ----------------------------------------------------
+
+open_csv <- 
+  function(source_data, 
+           sector_classification,
+           lb_percentile_filter, 
+           ub_percentile_filter, 
+           weighted, 
+           replace_outliers, 
+           infer_missing_uv_before, 
+           infer_missing_uv_after) {
+    filen <- paste0(
+      aggregation_level, "--delta_ln_price_index--", 
+      "HS_", versions$HS,
+      "-source_data_", source_data, 
+      "-sectors_", sector_classification, 
+      "-lb_perc_", lb_percentile_filter, 
+      "-ub_perc_", ub_percentile_filter,
+      "-weighted_", as.character(as.numeric(weighted)),
+      "-replace_outliers_", as.character(as.numeric(replace_outliers)), 
+      "-infer_missing_uv_before_", as.character(as.numeric(infer_missing_uv_before)), 
+      "-infer_missing_uv_after_", as.character(as.numeric(infer_missing_uv_after)), 
+      ".csv")
+    file <- here("data", "intermediary", filen)
+    if (file.exists(file)){
+      df <- 
+        read_csv(file) |>
+        as_tibble() |>
+        mutate(source_data = source_data, 
+               sector_classification = sector_classification, 
+               lb_percentile_filter = lb_percentile_filter,
+               ub_percentile_filter = ub_percentile_filter,
+               weighted = weighted,
+               replace_outliers = replace_outliers,
+               infer_missing_uv_before = infer_missing_uv_before,
+               infer_missing_uv_after = infer_missing_uv_after) 
+      return(df)
+    }
+  }
+
+aggregation_level <- "t-manuf"
+graph_df <-
+  pmap(list_methods, open_csv) |>
+  list_rbind() |>
+  left_join(dict_method_names,
+            by = c("source_data", 
+                   "sector_classification",
+                   "lb_percentile_filter", 
+                   "ub_percentile_filter", 
+                   "weighted",
+                   "replace_outliers",
+                   "infer_missing_uv_before",
+                   "infer_missing_uv_after")) |>
+  group_by(manuf, method_name) |>
+  filter(!is.na(price_index)) |>
+  mutate(
+    price_index = price_index * 100,
+    trade_value_base100 = (v / v[t == first_year]) * 100,
+    trade_volume_base100 = trade_value_base100 / price_index * 100) |>
+  ungroup() |>
+  rename(trade_value = v) |> 
+  relocate(trade_value, delta_ln_price_index, price_index, .after = last_col()) |>
+  relocate(trade_value_base100, trade_volume_base100, .after = last_col())
+filen <- paste0("t-manuf--price_indices_all_methods.csv")
+file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
+write_csv(graph_df, file)
+
 # * By stade over time ----------------------------------------------------
 
 # List of stades, to loop over
@@ -179,44 +247,9 @@ indicator_dict <-
     "trade_value_base100", "Value",
     "trade_volume_base100", "Volume")
 
-open_csv <- 
-  function(source_data, 
-           sector_classification,
-           lb_percentile_filter, 
-           ub_percentile_filter, 
-           weighted, 
-           replace_outliers, 
-           infer_missing_uv_before, 
-           infer_missing_uv_after) {
-    # Intermediary dataset from 02_compute_price_indices
-    filen <- paste0(
-      "t-stade--delta_ln_price_index--", 
-      "HS_", versions$HS,
-      "-source_data_", source_data, 
-      "-sectors_", sector_classification, 
-      "-lb_perc_", lb_percentile_filter, 
-      "-ub_perc_", ub_percentile_filter,
-      "-weighted_", as.character(as.numeric(weighted)),
-      "-replace_outliers_", as.character(as.numeric(replace_outliers)), 
-      "-infer_missing_uv_before_", as.character(as.numeric(infer_missing_uv_before)), 
-      "-infer_missing_uv_after_", as.character(as.numeric(infer_missing_uv_after)), 
-      ".csv")
-    file <- here("data", "intermediary", filen)
-    df <- 
-      read_csv(file) |>
-      as_tibble() |>
-      mutate(source_data = source_data, 
-             sector_classification = sector_classification, 
-             lb_percentile_filter = lb_percentile_filter,
-             ub_percentile_filter = ub_percentile_filter,
-             weighted = weighted,
-             replace_outliers = replace_outliers,
-             infer_missing_uv_before = infer_missing_uv_before,
-             infer_missing_uv_after = infer_missing_uv_after) 
-    return(df)
-  }
 
 
+aggregation_level <- "t-stade"
 graph_df <-
   pmap(list_methods, open_csv) |>
   list_rbind() |>
@@ -243,7 +276,7 @@ filen <- paste0("t-stade--price_indices_all_methods.csv")
 file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
 write_csv(graph_df, file)
 
-make_graph_price_index_over_time <- 
+plot_stade_trade_over_time <- 
   function(
     stade_select,
     method_select){
@@ -291,7 +324,7 @@ make_graph_price_index_over_time <-
 
 list_graphs <-
   list_stades |>
-  map(\(x) make_graph_price_index_over_time(
+  map(\(x) plot_stade_trade_over_time(
     x, 
     method_select = "both 5% weighted"
     ))
@@ -476,128 +509,7 @@ plot(graph)
 
 # * By ISIC over time -----------------------------------------------------
 
-filen <- paste0(
-  "t-isic_2d--delta_ln_price_index--", 
-  "HS_", versions$HS,
-  "-source_data_", source_data, 
-  "-sectors_", sector_classification, 
-  "-lb_perc_", lb_percentile_filter, 
-  "-ub_perc_", ub_percentile_filter,
-  "-weighted_", as.character(as.numeric(weighted)),
-  "-replace_outliers_", as.character(as.numeric(replace_outliers)), 
-  "-infer_missing_uv_before_", as.character(as.numeric(infer_missing_uv_before)), 
-  "-infer_missing_uv_after_", as.character(as.numeric(infer_missing_uv_after)), 
-  ".csv")
-file <- here("data", "intermediary", filen)
-graph_df <- 
-  read_csv(file) |> 
-  group_by(isic) |>
-  mutate(
-    trade_value_base100 = (v / v[t == first_year]) * 100,
-    trade_volume_base100 = trade_value_base100 / price_index) |>
-  ungroup() |>
-  filter(!is.na(price_index))
-
-make_graph_isic <- function(isic_select){
-  isic_2d_name_str <- 
-    isic_2d_dict |> 
-    filter(isic_2d == isic_select) |>
-    pull(isic_2d_name)
-  label_data <-
-    graph_df |>
-    
-    select(t, isic, starts_with("trade")) |>
-    pivot_longer(cols = starts_with("trade"),
-                 names_to = "type", 
-                 values_to = "trade") |>
-    filter(isic == isic_select) |>
-    left_join(isic_2d_dict, by = c("isic" = "isic_2d")) |>
-    left_join(indicator_dict, by = "type") |>
-    group_by(indicator_name) |>
-    slice_max(order_by = t, n = 1) 
-
-  graph <- 
-    graph_df |>
-    select(t, isic, starts_with("trade")) |>
-    pivot_longer(cols = starts_with("trade"),
-                 names_to = "type", 
-                 values_to = "trade") |>
-    filter(isic == isic_select) |>
-    left_join(isic_2d_dict, by = c("isic" = "isic_2d")) |>
-    ggplot(aes(x = t, y = trade, colour = type)) +
-    geom_line() +
-    geom_point() +
-    geom_label_repel(aes(label = indicator_name), data = label_data) +
-    geom_hline(yintercept = 100) +
-    labs(
-      title = isic_2d_name_str,
-      x = element_blank(),
-      y = glue("Trade (100 = {first_year})")
-    ) +
-    theme(
-      legend.position = "null"
-    )
-  
-  return(graph)
-}
-
-isic_select <- "01"
-list_isic <- 
-  graph_df |>
-  distinct(isic) |>
-  pull()
-list_graphs <-
-  map(list_isic, make_graph_isic)
-
-pdf(
-  file = here("output", "figures",
-              glue("trade_by_isic_over_time__hs{versions$HS}.pdf")),
-  width = 7, height = 5, onefile = TRUE
-)
-walk(
-  1:length(list_isic),
-  \(i) plot(list_graphs[[i]])
-)
-dev.off()
-
-# Compare different methodologies
-
-open_csv <- 
-  function(source_data, 
-           sector_classification,
-           lb_percentile_filter, 
-           ub_percentile_filter, 
-           weighted, 
-           replace_outliers, 
-           infer_missing_uv_before, 
-           infer_missing_uv_after) {
-    filen <- paste0(
-      "t-isic_2d--delta_ln_price_index--", 
-      "HS_", versions$HS,
-      "-source_data_", source_data, 
-      "-sectors_", sector_classification, 
-      "-lb_perc_", lb_percentile_filter, 
-      "-ub_perc_", ub_percentile_filter,
-      "-weighted_", as.character(as.numeric(weighted)),
-      "-replace_outliers_", as.character(as.numeric(replace_outliers)), 
-      "-infer_missing_uv_before_", as.character(as.numeric(infer_missing_uv_before)), 
-      "-infer_missing_uv_after_", as.character(as.numeric(infer_missing_uv_after)), 
-      ".csv")
-    file <- here("data", "intermediary", filen)
-    df <- 
-      read_csv(file) |>
-      as_tibble() |>
-      mutate(source_data = source_data, 
-             sector_classification = sector_classification, 
-             lb_percentile_filter = lb_percentile_filter,
-             ub_percentile_filter = ub_percentile_filter,
-             weighted = weighted,
-             replace_outliers = replace_outliers,
-             infer_missing_uv_before = infer_missing_uv_before,
-             infer_missing_uv_after = infer_missing_uv_after) 
-    return(df)
-  }
-
+aggregation_level <- "t-isic_2d"
 graph_df <-
   pmap(list_methods, open_csv) |>
   list_rbind() |>
@@ -622,6 +534,78 @@ graph_df <-
 filen <- paste0("t-isic--price_indices_all_methods.csv")
 file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
 write_csv(graph_df, file)
+
+plot_isic_trade_over_time <- function(isic_select,
+                                      method_select){
+  isic_2d_name_str <- 
+    isic_2d_dict |> 
+    filter(isic_2d == isic_select) |>
+    pull(isic_2d_name)
+  label_data <-
+    graph_df |>
+    filter(method_name == method_select) |>
+    select(t, isic, starts_with("trade")) |>
+    pivot_longer(cols = starts_with("trade"),
+                 names_to = "type", 
+                 values_to = "trade") |>
+    filter(isic == isic_select) |>
+    filter(type %in% c("trade_value_base100", "trade_volume_base100")) |>
+    left_join(isic_2d_dict, by = c("isic" = "isic_2d")) |>
+    left_join(indicator_dict, by = "type") |>
+    group_by(indicator_name) |>
+    slice_max(order_by = t, n = 1) 
+
+  graph <- 
+    graph_df |>
+    filter(method_name == method_select) |>
+    select(t, isic, starts_with("trade")) |>
+    pivot_longer(cols = starts_with("trade"),
+                 names_to = "type", 
+                 values_to = "trade") |>
+    filter(isic == isic_select) |>
+    filter(type %in% c("trade_value_base100", "trade_volume_base100")) |>
+    left_join(isic_2d_dict, by = c("isic" = "isic_2d")) |>
+    ggplot(aes(x = t, y = trade, colour = type)) +
+    geom_line() +
+    geom_point() +
+    geom_label_repel(aes(label = indicator_name), data = label_data) +
+    geom_hline(yintercept = 100) +
+    labs(
+      title = isic_2d_name_str,
+      x = element_blank(),
+      y = glue("Trade (100 = {first_year})")
+    ) +
+    theme(
+      legend.position = "null"
+    )
+  
+  return(graph)
+}
+
+list_isic <- 
+  graph_df |>
+  distinct(isic) |>
+  pull()
+list_graphs <-
+  list_isic |>
+  map(\(x) plot_isic_trade_over_time(
+    x, 
+    method_select = "both 5% weighted"
+  ))
+list_graphs[[1]]
+pdf(
+  file = here("output",
+              "figures",
+              paste0("trade_by_isic_over_time.pdf")),
+  width = 7, height = 5, onefile = TRUE
+)
+walk(
+  1:length(list_isic),
+  \(i) plot(list_isic[[i]])
+)
+dev.off()
+
+# Compare different methodologies
 
 make_graph_isic <- function(isic_select){
   isic_2d_name_str <- 
@@ -677,42 +661,6 @@ walk(
 dev.off()
 
 # * By ISIC x stade -------------------------------------------------------
-
-open_csv <- 
-  function(source_data, 
-           sector_classification,
-           lb_percentile_filter, 
-           ub_percentile_filter, 
-           weighted, 
-           replace_outliers, 
-           infer_missing_uv_before, 
-           infer_missing_uv_after) {
-    filen <- paste0(
-      aggregation_level, "--delta_ln_price_index--", 
-      "HS_", versions$HS,
-      "-source_data_", source_data, 
-      "-sectors_", sector_classification, 
-      "-lb_perc_", lb_percentile_filter, 
-      "-ub_perc_", ub_percentile_filter,
-      "-weighted_", as.character(as.numeric(weighted)),
-      "-replace_outliers_", as.character(as.numeric(replace_outliers)), 
-      "-infer_missing_uv_before_", as.character(as.numeric(infer_missing_uv_before)), 
-      "-infer_missing_uv_after_", as.character(as.numeric(infer_missing_uv_after)), 
-      ".csv")
-    file <- here("data", "intermediary", filen)
-    df <- 
-      read_csv(file) |>
-      as_tibble() |>
-      mutate(source_data = source_data, 
-             sector_classification = sector_classification, 
-             lb_percentile_filter = lb_percentile_filter,
-             ub_percentile_filter = ub_percentile_filter,
-             weighted = weighted,
-             replace_outliers = replace_outliers,
-             infer_missing_uv_before = infer_missing_uv_before,
-             infer_missing_uv_after = infer_missing_uv_after) 
-    return(df)
-  }
 
 aggregation_level <- "t-isic_2d-stade"
 graph_df <-

@@ -3,9 +3,6 @@ file <- file.path(paths$pc_baci_p, "Data", versions$baci_V, filen)
 message(file.info(file)$mtime) 
 baci_df <- 
   read_fst(file) 
-# |>
-  # mutate(uv = v/q)
-
 
 filen <- paste0("t-i-j-k--WTFC--HS1-DM201901.Rds")
 file <- file.path(paths$wtfc_p, "Data", versions$wtfc_V, filen)
@@ -42,7 +39,7 @@ file <- file.path(paths$wtfc_p, "Data", "202104", filen)
 write_fst(wtfc_df, file, compress = 100)
 
 
-# * nomenclatures --------------------------------------------------------
+#  nomenclatures --------------------------------------------------------
 
 # ISIC_2d - our ISIC
 
@@ -80,8 +77,10 @@ hs_isic_df <-
   group_by(!!k_varname) |>
   mutate(share = 1 / n()) |>
   ungroup() |>
+  mutate(manuf = (between(isic_2d, "10", "33")) |>
+           as.numeric()) |>
   mutate(k = as.numeric(!!k_varname)) |>
-  select(k, isic_2d, share)
+  select(k, isic_2d, share, manuf)
 
 # HS - ISIC for prices
 filen <- paste0("ISIC_2d-our_ISIC.csv")
@@ -92,7 +91,7 @@ isic__isic_for_prices <-
 hs_isic_for_prices <- 
   hs_isic_df |>
   left_join(isic__isic_for_prices, by = "isic_2d") |> 
-  select(k, isic_2d_aggregated, share) 
+  select(k, isic_2d_aggregated, share, manuf) 
 filen <- paste0("HS", versions$HS, "-our_ISIC--share.csv")
 file <- here("data", "nomenclatures", filen)
 write_csv(hs_isic_for_prices, file)
@@ -181,7 +180,7 @@ raw_baci_with_group_variables  <-
   mutate(v = v * share) |>
   select(-share) |>
   mutate(
-    # t_k = paste(t, k),
+    t_manuf = as.factor(paste(t, manuf)),
     t_isic = as.factor(paste(t, isic_2d_aggregated)),
     t_stade = as.factor(paste(t, stade)),
     t_isic_stade = as.factor(paste(t, isic_2d_aggregated, stade))
@@ -190,6 +189,7 @@ filen <- paste0("t-i-j-k--BACI_with_group_variables--HS", versions$HS, "-V", ver
 file <- here("data", "intermediary", filen)
 write_fst(raw_baci_with_group_variables, file, compress = 100)
 
+# Version for the CEPII nomenclature
 filen <- paste0("HS", versions$HS, "-branches_for_prices--share.csv")
 file <- here("data", "nomenclatures", filen)
 hs_branch_for_prices <- 

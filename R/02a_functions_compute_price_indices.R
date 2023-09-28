@@ -336,6 +336,7 @@ save_csv_files_price_index <-
     file <- here("data", "intermediary", filen)
     df_with_group_variables  <- 
       read_fst(file) |>
+      filter(t >= first_year) |>
       mutate(k = as.numeric(k)) |>
       left_join(hs_isic_for_prices, by = "k") |>
       mutate(v = v * share, l_v = l_v * share) |>
@@ -345,7 +346,7 @@ save_csv_files_price_index <-
       mutate(v = v * share, l_v = l_v * share) |>
       select(-share) |>
       mutate(
-        # t_k = paste(t, k),
+        t_manuf = paste(t, manuf),
         t_isic = paste(t, isic_2d_aggregated),
         t_stade = paste(t, stade),
         t_isic_stade = paste(t, isic_2d_aggregated, stade)
@@ -388,6 +389,28 @@ save_csv_files_price_index <-
     filen <- paste0("t--delta_ln_price_index--", end_of_filenames)
     file <- here("data", "intermediary", filen)
     write_csv(t_price_index_df, file)
+    
+    t_manuf_price_index_df <- 
+      compute_price_index(
+        df_with_group_variables = df_with_group_variables,
+        raw_baci_with_group_variables = raw_baci_with_group_variables,
+        aggregation_level = t_manuf) %>%
+      .[["price_df"]] |>
+      separate_wider_delim(t_manuf, delim = " ", names_sep = "_") |>
+      rename(t = t_manuf_1, manuf = t_manuf_2) |>
+      mutate(delta_ln_price_index = case_when(
+        t == first_year ~ 0, 
+        .default = delta_ln_price_index
+      )) |>
+      arrange(manuf, t) |>
+      group_by(manuf) |>
+      mutate(cumul_delta_ln_price_index = cumsum(delta_ln_price_index)) |>
+      ungroup() |>
+      mutate(price_index = exp(cumul_delta_ln_price_index)) |>
+      select(-cumul_delta_ln_price_index)
+    filen <- paste0("t-manuf--delta_ln_price_index--", end_of_filenames)
+    file <- here("data", "intermediary", filen)
+    write_csv(t_manuf_price_index_df, file)
     
     # message("Computing year x production_stage price index")
     # By t-stade

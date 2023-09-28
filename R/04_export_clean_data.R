@@ -49,6 +49,35 @@ filen <- paste0(
 file <- here("data", "final", versions$trade_price_V, filen)
 write_csv(aggregate_data, file)
 
+
+# * Manuf level -----------------------------------------------------------
+
+filen <- paste0("t-manuf--delta_ln_price_index--", end_of_filenames)
+file <- here("data", "intermediary", filen)
+manuf_data <- 
+  read_csv(file) |> 
+  as_tibble() |>
+  mutate(price_index = price_index * 100) |>
+  group_by(manuf) |>
+  mutate(
+    trade_value_base_100 = (v / v[t == first_year]) * 100,
+    trade_volume_base_100 = trade_value_base_100 / price_index * 100) |>
+  ungroup() |>
+  mutate(aggregation_level = "Year x Manufacturing") |>
+  rename(year = t, 
+         trade_value_dollars = v,
+         price_index_base_100 = price_index) |>
+  mutate(across(c(where(is.numeric), - trade_value_dollars), 
+                ~ round(.x, digits = 4))) |>
+  mutate(trade_value_dollars = round(trade_value_dollars, digits = 3)) |>
+  select(aggregation_level, year, manuf,
+         price_index_base_100, trade_value_dollars, trade_value_base_100,
+         trade_volume_base_100)
+filen <- paste0(
+  "price_indices_manufacturing__v_", versions$trade_price_V, ".csv")
+file <- here("data", "final", versions$trade_price_V, filen)
+write_csv(stade_data, file)
+
 # * stade level -----------------------------------------------------------
 
 filen <- paste0("t-stade--delta_ln_price_index--", end_of_filenames)

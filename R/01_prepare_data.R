@@ -52,7 +52,7 @@ isic_2d_dict <-
   mutate(description = case_when(
     code == "16" ~ "Wood",
     code == "18" ~ "Recorded media",
-    code == "21" ~ "Pharmarcy",
+    code == "21" ~ "Pharmacy",
     code == "25" ~ "Fabricated metal products",
     code == "29" ~ "Motor vehicles & trailers",
     code == "62" ~ "Computer programming, consultancy",
@@ -61,7 +61,7 @@ isic_2d_dict <-
   add_row( 
     code = "XX", description =  "Other manuf") |>
   add_row( 
-    code = "NED", description =  "NED") |>
+    code = "NEC", description =  "NEC") |>
   rename(isic_2d = code, 
          isic_2d_name = description)
   

@@ -5,7 +5,7 @@ file <- here("data", "intermediary", filen)
 raw_baci_with_group_variables <-
   read_fst(file) |>
   filter(t >= first_year) |>
-  mutate(across(c(t_isic, t_stade, t_isic_stade),
+  mutate(across(c(t_manuf, t_isic, t_stade, t_isic_stade),
                 ~ as.character(.x)))
 
 # Remove outliers  --------------------------------------------------------
@@ -25,9 +25,9 @@ list_arguments <-
     0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "both"
   )
 
-# list_arguments <- 
-#   list_arguments |>
-#   filter(source_data == "baci")
+list_arguments <-
+  list_arguments |>
+  filter(source_data != "both" & lb_percentile_filter != 0.075 & weighted == TRUE)
 
 pwalk(list_arguments, prepare_data_for_price_indices)
 
@@ -64,7 +64,7 @@ pwalk(list_arguments, save_csv_files_price_index)
 sector_classification <- "isic"
 lb_percentile_filter <- 0.05
 ub_percentile_filter <- 0.95
-weighted <- FALSE
+weighted <- TRUE
 replace_by_centiles <- FALSE
 infer_missing_uv_before <- FALSE
 infer_missing_uv_after <- FALSE
@@ -113,6 +113,49 @@ df <-
 source_data <- "both_aggregate"
 filen <- paste0(
   "t--delta_ln_price_index--", 
+  "HS_", versions$HS,
+  "-source_data_", source_data, 
+  end_of_filenames)
+file <- here("data", "intermediary", filen)
+write_csv(df, file)
+
+# t-manuf
+source_data <- "wtfc"
+filen <- paste0(
+  "t-manuf--delta_ln_price_index--", 
+  "HS_", versions$HS,
+  "-source_data_", source_data, 
+  end_of_filenames)
+file <- here("data", "intermediary", filen)
+wtfc_prices <-  
+  read_csv(file) |>
+  as_tibble() |>
+  filter(t <= 2019) 
+
+source_data <- "baci"
+filen <- paste0(
+  "t-manuf--delta_ln_price_index--", 
+  "HS_", versions$HS,
+  "-source_data_", source_data, 
+  end_of_filenames)
+file <- here("data", "intermediary", filen)
+baci_prices <-  
+  read_csv(file) |>
+  as_tibble() |>
+  filter(t > 2019)
+
+df <-
+  bind_rows(wtfc_prices, baci_prices) |>
+  select(-price_index) |>
+  arrange(manuf, t) |>
+  group_by(manuf) |>
+  mutate(cumul_delta_ln_price_index = cumsum(delta_ln_price_index)) |>
+  ungroup() |>
+  mutate(price_index = exp(cumul_delta_ln_price_index)) |>
+  select(-cumul_delta_ln_price_index)
+source_data <- "both_aggregate"
+filen <- paste0(
+  "t-manuf--delta_ln_price_index--", 
   "HS_", versions$HS,
   "-source_data_", source_data, 
   end_of_filenames)
