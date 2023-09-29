@@ -1,19 +1,6 @@
 
 library(tidyverse)
 
-# Read BACI ---------------------------------------------------------------
-
-filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
-file <- file.path(paths$baci_p, "Data", versions$baci_V, filen)
-message(file.info(file)$mtime) 
-baci_df <- 
-  read_fst(file) |>
-  mutate(uv = v / q)
-
-list_k_in_baci <- 
-  baci_df |>
-  distinct(k)
-
 # Concordance tables ------------------------------------------------------
 
 k_varname <- sym(paste0("HS", versions$HS))
@@ -21,20 +8,12 @@ k_varname_str <- paste0("HS", versions$HS)
 
 # HS - stade
 filen <- paste0("HS", versions$HS, "-stade--share.csv")
-file <- file.path(paths$nomenclatures_p, "conversions", filen)
+file <- here("data", "nomenclatures", filen)
 hs_stade_df <- 
-  read_csv(file) |> 
-  mutate(k = as.numeric(!!k_varname)) |>
-  select(k, stade, share) |>
-  full_join(list_k_in_baci, by = "k") |> 
-  mutate(stade = case_when(
-    .default = stade, 
-    is.na(stade) ~ "6_NEC"
-  )) |>
-  replace_na(list(share = 1)) |>
-  arrange(k)
-rm(list_k_in_baci)
+  read_csv(file) |>
+  as_tibble()
 
+# HS - ISIC
 filen <- paste0("HS", versions$HS, "-our_ISIC--share.csv")
 file <- here("data", "nomenclatures", filen)
 hs_isic_for_prices <- 

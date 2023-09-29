@@ -8,6 +8,10 @@ raw_baci_with_group_variables <-
   mutate(across(c(t_manuf, t_isic, t_stade, t_isic_stade),
                 ~ as.character(.x)))
 
+tmp <-
+  raw_baci_with_group_variables |>
+  distinct(isic_2d_aggregated)
+
 # Remove outliers  --------------------------------------------------------
 
 list_arguments <- 

@@ -49,7 +49,6 @@ filen <- paste0(
 file <- here("data", "final", versions$trade_price_V, filen)
 write_csv(aggregate_data, file)
 
-
 # * Manuf level -----------------------------------------------------------
 
 filen <- paste0("t-manuf--delta_ln_price_index--", end_of_filenames)
@@ -76,7 +75,7 @@ manuf_data <-
 filen <- paste0(
   "price_indices_manufacturing__v_", versions$trade_price_V, ".csv")
 file <- here("data", "final", versions$trade_price_V, filen)
-write_csv(stade_data, file)
+write_csv(manuf_data, file)
 
 # * stade level -----------------------------------------------------------
 
@@ -99,6 +98,11 @@ stade_data <-
   mutate(across(c(where(is.numeric), - trade_value_dollars), 
                 ~ round(.x, digits = 4))) |>
   mutate(trade_value_dollars = round(trade_value_dollars, digits = 3)) |>
+  mutate(across(c(price_index_base_100, trade_volume_base_100), 
+                ~ case_when(
+                  production_stage == "6_NEC" ~ NA,
+                  .default = price_index_base_100
+  ))) |>
   select(aggregation_level, year, production_stage,
          price_index_base_100, trade_value_dollars, trade_value_base_100,
          trade_volume_base_100)
@@ -127,6 +131,11 @@ isic_data <-
   mutate(across(c(where(is.numeric), - trade_value_dollars), 
                 ~ round(.x, digits = 4))) |>
   mutate(trade_value_dollars = round(trade_value_dollars, digits = 3)) |>
+  mutate(across(c(price_index_base_100, trade_volume_base_100), 
+                ~ case_when(
+                  isic == "NEC" ~ NA,
+                  .default = price_index_base_100
+                ))) |>
   left_join(isic_2d_dict, by = c("isic" = "isic_2d")) |>
   rename(isic_name = isic_2d_name) |>
   select(aggregation_level, year, isic, isic_name,
@@ -158,6 +167,11 @@ isic_stade_data <-
   mutate(across(c(where(is.numeric), - trade_value_dollars), 
                 ~ round(.x, digits = 4))) |>
   mutate(trade_value_dollars = round(trade_value_dollars, digits = 3)) |>
+  mutate(across(c(price_index_base_100, trade_volume_base_100), 
+                ~ case_when(
+                  isic == "NEC" | production_stage == "6_NEC" ~ NA,
+                  .default = price_index_base_100
+                ))) |>
   left_join(isic_2d_dict, by = c("isic" = "isic_2d")) |>
   rename(isic_name = isic_2d_name) |>
   select(aggregation_level, year, isic, production_stage,

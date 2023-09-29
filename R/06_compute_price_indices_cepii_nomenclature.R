@@ -230,7 +230,6 @@ walk(
 )
 dev.off()
 
-
 #  All manuf products -----------------------------------------------------
 
 aggregation_level <- "t"
@@ -371,6 +370,26 @@ filen <- paste0("t-stade--price_indices_all_methods--cepii_nomenclature.csv")
 file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
 write_csv(graph_df, file)
 
+list_method_names <- 
+  dict_method_names |>
+  distinct(method_name) |>
+  pull()
+list_graphs <-
+  map(list_method_names, make_graph_trade_volume_all_stades)
+pdf(
+  file = here(
+    "output", "figures",
+    glue("trade_volume_over_time__by_stade__different_methodologies__cepii_nomenclature.pdf")
+  ),
+  width = 7, height = 5, onefile = TRUE
+)
+walk(
+  1:length(list_method_names),
+  \(i) plot(list_graphs[[i]])
+)
+dev.off()
+
+# By ISIC x stade -------------------------------------------------------
 
 aggregation_level <- "t-isic_2d-stade"
 graph_df <-

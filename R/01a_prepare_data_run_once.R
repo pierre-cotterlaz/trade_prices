@@ -41,6 +41,41 @@ write_fst(wtfc_df, file, compress = 100)
 
 #  nomenclatures --------------------------------------------------------
 
+filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
+file <- file.path(paths$baci_p, "Data", versions$baci_V, filen)
+message(file.info(file)$mtime) 
+baci_df <- 
+  read_fst(file) |>
+  mutate(uv = v / q)
+
+list_k_in_baci <- 
+  baci_df |>
+  distinct(k)
+
+# Concordance tables ------------------------------------------------------
+
+k_varname <- sym(paste0("HS", versions$HS))
+k_varname_str <- paste0("HS", versions$HS)
+
+# HS - stade
+filen <- paste0("HS", versions$HS, "-stade--share.csv")
+file <- file.path(paths$nomenclatures_p, "conversions", filen)
+hs_stade_df <- 
+  read_csv(file) |> 
+  mutate(k = as.numeric(!!k_varname)) |>
+  select(k, stade, share) |>
+  full_join(list_k_in_baci, by = "k") |> 
+  mutate(stade = case_when(
+    .default = stade, 
+    is.na(stade) ~ "6_NEC"
+  )) |>
+  replace_na(list(share = 1)) |>
+  arrange(k)
+filen <- paste0("HS", versions$HS, "-stade--share.csv")
+file <- here("data", "nomenclatures", filen)
+write_csv(hs_stade_df, file)
+rm(list_k_in_baci)
+
 # ISIC_2d - our ISIC
 
 filen <- paste0("t-i-j-isic_2d--BACI--V", versions$baci_V, ".fst")
@@ -58,7 +93,7 @@ isic__isic_for_prices <-
     .names = "sh_{.col}")) |>
   arrange(- sh_nb_flows) |>
   mutate(isic_2d_aggregated = case_when(  
-    sh_nb_flows < 1 ~ "NED",
+    sh_nb_flows < 1 ~ "NEC",
     .default = isic_2d)) |>
   select(isic_2d, isic_2d_aggregated) |>
   arrange(isic_2d)

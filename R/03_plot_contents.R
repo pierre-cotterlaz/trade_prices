@@ -582,9 +582,13 @@ plot_isic_trade_over_time <- function(isic_select,
   return(graph)
 }
 
+isic_select <- "21"
+method_select <- "both 5% weighted"
+
 list_isic <- 
   graph_df |>
   distinct(isic) |>
+  filter(!isic %in% c("NEC", "NED")) |>
   pull()
 list_graphs <-
   list_isic |>

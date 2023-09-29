@@ -1,3 +1,29 @@
+
+
+# * NA dans ISIC ----------------------------------------------------------
+
+filen <- paste0(
+  "price_indices_by_isic__v_", versions$trade_price_V, ".csv")
+file <- here("data", "final", versions$trade_price_V, filen)
+df <- 
+  read_csv(file) |>
+  as_tibble() |>
+  filter(is.na(isic_name))
+
+filen <- paste0(
+  "price_indices_by_isic_production_stage__v_", versions$trade_price_V, ".csv")
+file <- here("data", "final", versions$trade_price_V, filen)
+df <- 
+  read_csv(file) |>
+  as_tibble() |>
+  filter(is.na(isic_name))
+
+# *  ----------------------------------------------------------------------
+
+
+
+
+
 filen <- paste0("t-i-j-k--BACI--HS", versions$HS, "-V", versions$baci_V, ".fst")
 file <- file.path(paths$baci_p, "Data", versions$baci_V, filen)
 message(file.info(file)$mtime) 
