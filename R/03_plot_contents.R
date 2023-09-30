@@ -43,9 +43,8 @@ open_csv <-
            replace_outliers, 
            infer_missing_uv_before, 
            infer_missing_uv_after) {
-    # Intermediary dataset from 02_compute_price_indices
     filen <- paste0(
-      "t--delta_ln_price_index--", 
+      aggregation_level, "--delta_ln_price_index--", 
       "HS_", versions$HS,
       "-source_data_", source_data, 
       "-sectors_", sector_classification, 
@@ -57,21 +56,23 @@ open_csv <-
       "-infer_missing_uv_after_", as.character(as.numeric(infer_missing_uv_after)), 
       ".csv")
     file <- here("data", "intermediary", filen)
-    df <- 
-      read_csv(file) |>
-      as_tibble() |>
-      mutate(source_data = source_data, 
-             sector_classification = sector_classification, 
-             lb_percentile_filter = lb_percentile_filter,
-             ub_percentile_filter = ub_percentile_filter,
-             weighted = weighted,
-             replace_outliers = replace_outliers,
-             infer_missing_uv_before = infer_missing_uv_before,
-             infer_missing_uv_after = infer_missing_uv_after) 
-    return(df)
+    if (file.exists(file)){
+      df <- 
+        read_csv(file) |>
+        as_tibble() |>
+        mutate(source_data = source_data, 
+               sector_classification = sector_classification, 
+               lb_percentile_filter = lb_percentile_filter,
+               ub_percentile_filter = ub_percentile_filter,
+               weighted = weighted,
+               replace_outliers = replace_outliers,
+               infer_missing_uv_before = infer_missing_uv_before,
+               infer_missing_uv_after = infer_missing_uv_after) 
+      return(df)
+    }
   }
 
-
+aggregation_level <- "t"
 graph_df <-
   pmap(list_methods, open_csv) |>
   list_rbind() |>
@@ -166,43 +167,7 @@ ggsave(
 
 # * By manuf over time ----------------------------------------------------
 
-open_csv <- 
-  function(source_data, 
-           sector_classification,
-           lb_percentile_filter, 
-           ub_percentile_filter, 
-           weighted, 
-           replace_outliers, 
-           infer_missing_uv_before, 
-           infer_missing_uv_after) {
-    filen <- paste0(
-      aggregation_level, "--delta_ln_price_index--", 
-      "HS_", versions$HS,
-      "-source_data_", source_data, 
-      "-sectors_", sector_classification, 
-      "-lb_perc_", lb_percentile_filter, 
-      "-ub_perc_", ub_percentile_filter,
-      "-weighted_", as.character(as.numeric(weighted)),
-      "-replace_outliers_", as.character(as.numeric(replace_outliers)), 
-      "-infer_missing_uv_before_", as.character(as.numeric(infer_missing_uv_before)), 
-      "-infer_missing_uv_after_", as.character(as.numeric(infer_missing_uv_after)), 
-      ".csv")
-    file <- here("data", "intermediary", filen)
-    if (file.exists(file)){
-      df <- 
-        read_csv(file) |>
-        as_tibble() |>
-        mutate(source_data = source_data, 
-               sector_classification = sector_classification, 
-               lb_percentile_filter = lb_percentile_filter,
-               ub_percentile_filter = ub_percentile_filter,
-               weighted = weighted,
-               replace_outliers = replace_outliers,
-               infer_missing_uv_before = infer_missing_uv_before,
-               infer_missing_uv_after = infer_missing_uv_after) 
-      return(df)
-    }
-  }
+
 
 aggregation_level <- "t-manuf"
 graph_df <-

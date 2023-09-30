@@ -8,10 +8,6 @@ raw_baci_with_group_variables <-
   mutate(across(c(t_manuf, t_isic, t_stade, t_isic_stade),
                 ~ as.character(.x)))
 
-tmp <-
-  raw_baci_with_group_variables |>
-  distinct(isic_2d_aggregated)
-
 # Remove outliers  --------------------------------------------------------
 
 list_arguments <- 
@@ -29,9 +25,9 @@ list_arguments <-
     0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "both"
   )
 
-list_arguments <-
-  list_arguments |>
-  filter(source_data != "both" & lb_percentile_filter != 0.075 & weighted == TRUE)
+# list_arguments <-
+#   list_arguments |>
+#   filter(source_data != "both" & lb_percentile_filter != 0.075 & weighted == TRUE)
 
 pwalk(list_arguments, prepare_data_for_price_indices)
 

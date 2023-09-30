@@ -177,10 +177,10 @@ isic_stade_data <-
   select(aggregation_level, year, isic, production_stage,
          price_index_base_100, trade_value_dollars, trade_value_base_100,
          trade_volume_base_100, isic_name)
-filen <- paste0(
-  "price_indices_by_isic_production_stage__v_", versions$trade_price_V, ".csv")
-file <- here("data", "final", versions$trade_price_V, filen)
-write_csv(isic_stade_data, file)
+# filen <- paste0(
+#   "price_indices_by_isic_production_stage__v_", versions$trade_price_V, ".csv")
+# file <- here("data", "final", versions$trade_price_V, filen)
+# write_csv(isic_stade_data, file)
 
 # * Create zip file -------------------------------------------------------
 
