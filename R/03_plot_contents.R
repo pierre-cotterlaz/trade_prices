@@ -95,9 +95,12 @@ graph_df <-
   rename(trade_value = v) |> 
   relocate(trade_value, delta_ln_price_index, price_index, .after = last_col()) |>
   relocate(trade_value_base100, trade_volume_base100, .after = last_col())
-filen <- paste0("t--price_indices_all_methods.csv")
-file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
-write_csv(graph_df, file)
+
+write_csv(
+  graph_df,
+  here("data", "final", versions$trade_price_V, "all_methods", 
+       paste0("t--price_indices_all_methods.csv"))
+)
 
 label_data <-
   graph_df |>
@@ -237,9 +240,11 @@ graph_df <-
   rename(trade_value = v) |> 
   relocate(trade_value, delta_ln_price_index, price_index, .after = last_col()) |>
   relocate(trade_value_base100, trade_volume_base100, .after = last_col())
-filen <- paste0("t-stade--price_indices_all_methods.csv")
-file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
-write_csv(graph_df, file)
+write_csv(
+  graph_df, 
+  here("data", "final", versions$trade_price_V, "all_methods", 
+       paste0("t-stade--price_indices_all_methods.csv"))
+  )
 
 plot_stade_trade_over_time <- 
   function(
@@ -496,9 +501,12 @@ graph_df <-
   rename(trade_value = v) |> 
   relocate(trade_value, delta_ln_price_index, price_index, .after = last_col()) |>
   relocate(trade_value_base100, trade_volume_base100, .after = last_col())
-filen <- paste0("t-isic--price_indices_all_methods.csv")
-file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
-write_csv(graph_df, file)
+
+write_csv(
+  graph_df,
+  here("data", "final", versions$trade_price_V, "all_methods", 
+       paste0("t-isic--price_indices_all_methods.csv"))
+  )
 
 plot_isic_trade_over_time <- function(isic_select,
                                       method_select){
@@ -653,6 +661,8 @@ graph_df <-
   rename(trade_value = v) |> 
   relocate(trade_value, delta_ln_price_index, price_index, .after = last_col()) |>
   relocate(trade_value_base100, trade_volume_base100, .after = last_col())
-filen <- paste0("t-isic-stade--price_indices_all_methods.csv")
-file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
-write_csv(graph_df, file)
+
+write_csv(
+  graph_df, 
+  here("data", "final", versions$trade_price_V, "all_methods", paste0("t-isic-stade--price_indices_all_methods.csv"))
+  )

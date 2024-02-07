@@ -10,15 +10,15 @@ library(tidyverse)
 define_paths <- function(location) {
   if (location == "pc") {
     PC_p <- file.path("D:", "cotterlaz")
-    nomenclatures_p <- file.path(PC_p, "BACI", "Nomenclatures")
-    pc_baci_p <- file.path(PC_p, "BACI", "BACI")
+    nomenclatures_p <- file.path(PC_p, "cepii_datasets", "nomenclatures")
+    pc_baci_p <- file.path(PC_p, "cepii_datasets", "baci")
     baci_p <- pc_baci_p
-    wtfc_p <- file.path(PC_p, "BACI", "WTFC")
+    wtfc_p <- file.path(PC_p, "cepii_datasets", "wtfc")
   }
   if (location == "baci8") {
     PC_p <- file.path("\\\\dell5820108", "cotterlaz$")
-    nomenclatures_p <- file.path(PC_p, "BACI", "Nomenclatures")
-    pc_baci_p <- file.path(PC_p, "BACI", "BACI")
+    nomenclatures_p <- file.path(PC_p, "cepii_datasets", "nomenclatures")
+    pc_baci_p <- file.path(PC_p, "cepii_datasets", "baci")
     baci_p <- file.path("D:", "BACI", "BACI")
     wtfc_p <- file.path("D:", "BACI", "WTFC")
   }
@@ -45,9 +45,9 @@ rm(wd)
 
 versions <- list(
   HS = 1,
-  baci_V = "202301",
+  baci_V = "202401",
   wtfc_V = "202104",
-  trade_price_V = "202306")
+  trade_price_V = "202402")
 
 define_first_year <- function(revision){
   if (revision == 1){

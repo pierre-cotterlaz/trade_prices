@@ -25,10 +25,11 @@ end_of_filenames <- paste0(
 
 # * Year level ------------------------------------------------------------
 
-filen <- paste0("t--delta_ln_price_index--", end_of_filenames)
-file <- here("data", "intermediary", filen)
+
 aggregate_data <- 
-  read_csv(file) |> 
+  here("data", "intermediary", 
+       paste0("t--delta_ln_price_index--", end_of_filenames)) |>
+  read_csv() |> 
   as_tibble() |>
   mutate(price_index = price_index * 100) |>
   mutate(
@@ -44,17 +45,18 @@ aggregate_data <-
   select(aggregation_level, year,
          price_index_base_100, trade_value_dollars, trade_value_base_100,
          trade_volume_base_100)
-filen <- paste0(
-  "price_indices_aggregate__v_", versions$trade_price_V, ".csv")
-file <- here("data", "final", versions$trade_price_V, filen)
-write_csv(aggregate_data, file)
+write_csv(
+  aggregate_data, 
+  here("data", "final", versions$trade_price_V, 
+       paste0("price_indices_aggregate__v_", versions$trade_price_V, ".csv"))
+  )
 
 # * Manuf level -----------------------------------------------------------
 
-filen <- paste0("t-manuf--delta_ln_price_index--", end_of_filenames)
-file <- here("data", "intermediary", filen)
 manuf_data <- 
-  read_csv(file) |> 
+  here("data", "intermediary", 
+       paste0("t-manuf--delta_ln_price_index--", end_of_filenames)) |>
+  read_csv() |> 
   as_tibble() |>
   mutate(price_index = price_index * 100) |>
   group_by(manuf) |>
@@ -72,17 +74,18 @@ manuf_data <-
   select(aggregation_level, year, manuf,
          price_index_base_100, trade_value_dollars, trade_value_base_100,
          trade_volume_base_100)
-filen <- paste0(
-  "price_indices_manufacturing__v_", versions$trade_price_V, ".csv")
-file <- here("data", "final", versions$trade_price_V, filen)
-write_csv(manuf_data, file)
+write_csv(
+  manuf_data, 
+  here("data", "final", versions$trade_price_V, 
+       paste0("price_indices_manufacturing__v_", versions$trade_price_V, ".csv"))
+  )
 
 # * stade level -----------------------------------------------------------
 
-filen <- paste0("t-stade--delta_ln_price_index--", end_of_filenames)
-file <- here("data", "intermediary", filen)
 stade_data <- 
-  read_csv(file) |> 
+  here("data", "intermediary", 
+       paste0("t-stade--delta_ln_price_index--", end_of_filenames)) |>
+  read_csv() |> 
   as_tibble() |>
   mutate(price_index = price_index * 100) |>
   group_by(stade) |>
@@ -106,17 +109,20 @@ stade_data <-
   select(aggregation_level, year, production_stage,
          price_index_base_100, trade_value_dollars, trade_value_base_100,
          trade_volume_base_100)
-filen <- paste0(
-  "price_indices_by_production_stage__v_", versions$trade_price_V, ".csv")
-file <- here("data", "final", versions$trade_price_V, filen)
-write_csv(stade_data, file)
+
+write_csv(
+  stade_data, 
+  here("data", "final", versions$trade_price_V, 
+       paste0("price_indices_by_production_stage__v_", 
+              versions$trade_price_V, ".csv"))
+  )
 
 # * isic level ------------------------------------------------------------
 
-filen <- paste0("t-isic_2d--delta_ln_price_index--", end_of_filenames)
-file <- here("data", "intermediary", filen)
-isic_data <- 
-  read_csv(file) |> 
+isic_data <-
+  here("data", "intermediary", 
+       paste0("t-isic_2d--delta_ln_price_index--", end_of_filenames)) |>
+  read_csv() |> 
   as_tibble() |>
   mutate(price_index = price_index * 100) |>
   group_by(isic) |>
@@ -141,17 +147,19 @@ isic_data <-
   select(aggregation_level, year, isic, isic_name,
          price_index_base_100, trade_value_dollars, trade_value_base_100,
          trade_volume_base_100)
-filen <- paste0(
-  "price_indices_by_isic__v_", versions$trade_price_V, ".csv")
-file <- here("data", "final", versions$trade_price_V, filen)
-write_csv(isic_data, file)
+
+write_csv(
+  isic_data, 
+  here("data", "final", versions$trade_price_V, 
+       paste0("price_indices_by_isic__v_", versions$trade_price_V, ".csv"))
+  )
 
 # * isic x stade level ----------------------------------------------------
 
-filen <- paste0("t-isic_2d-stade--delta_ln_price_index--", end_of_filenames)
-file <- here("data", "intermediary", filen)
-isic_stade_data <- 
-  read_csv(file) |> 
+isic_stade_data <-
+  here("data", "intermediary", 
+       paste0("t-isic_2d-stade--delta_ln_price_index--", end_of_filenames)) |>
+  read_csv() |> 
   as_tibble() |>
   mutate(price_index = price_index * 100) |>
   group_by(isic, stade) |>

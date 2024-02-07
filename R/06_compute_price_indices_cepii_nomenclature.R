@@ -31,7 +31,6 @@ baci_df <-
 
 share_obs_by_branch <- 
   baci_df |>
-  filter(manuf == 1) |>
   summarize(.by = branch,
             nb_obs = n_distinct(t, i, j, k)) |>
   mutate(sh_obs = nb_obs / sum(nb_obs)) |>
@@ -40,7 +39,7 @@ share_obs_by_branch <-
 branch__branch_for_price <- 
   share_obs_by_branch |>
   mutate(branch_for_price = case_when(
-    sh_obs < 0.005 ~ "NEC",
+    sh_obs < 0 ~ "NEC",
     .default = branch
   )) |>
   select(branch, branch_for_price) |>
@@ -97,178 +96,49 @@ file <- here("data", "intermediary", filen)
 raw_baci_with_group_variables <-
   read_fst(file) |>
   filter(t >= first_year) |>
-  filter(manuf == 1) |>
   mutate(across(c(t_isic, t_stade, t_isic_stade),
                 ~ as.character(.x)))
-
+tmp <- 
+  raw_baci_with_group_variables |>
+  distinct(isic_2d_aggregated)
 
 pwalk(list_arguments, save_csv_files_price_index)
 
-# * Plot graphs -----------------------------------------------------------
+
+# * Create "both aggregated" series ---------------------------------------
 
 sector_classification <- "cepii"
-source_data <- "wtfc"
-lb_percentile_filter <- 0.05
-ub_percentile_filter <- 0.95
-weighted <- TRUE
-replace_outliers <- FALSE
-infer_missing_uv_before <- FALSE
-infer_missing_uv_after <- FALSE
-end_of_filenames <- paste0(
-  "HS_", versions$HS,
-  "-source_data_", source_data, 
-  "-sectors_", sector_classification, 
-  "-lb_perc_", lb_percentile_filter, 
-  "-ub_perc_", ub_percentile_filter,
-  "-weighted_", as.character(as.numeric(weighted)),
-  "-replace_outliers_", as.character(as.numeric(replace_by_centiles)), 
-  "-infer_missing_uv_before_", as.character(as.numeric(infer_missing_uv_before)), 
-  "-infer_missing_uv_after_", as.character(as.numeric(infer_missing_uv_after)), 
-  ".csv"
-)
-filen <- paste0(
-  "t--delta_ln_price_index--", 
-  end_of_filenames)
-file <- here("data", "intermediary", filen)
-message(file.info(file)$mtime)
-graph_df <- 
-  read_csv(file) |>
-  mutate(
-    price_index = price_index * 100,
-    trade_value_base100 = (v / v[t == first_year]) * 100,
-    trade_volume_base100 = trade_value_base100 / price_index * 100) |>
-  ungroup()
-graph <- 
-  graph_df |> 
-  ggplot(aes(x = t, y = price_index)) +
-  geom_line() +
-  geom_point() +
-  geom_hline(yintercept = 100) +
-  labs(
-    x = element_blank(),
-    y = paste0("Price index (100 = ", first_year, ")")
-  ) +
-  theme(
-    legend.position = "null"
-  ) 
-plot(graph)
+create_both_aggregated_series(sector_classification)
 
-list_stades <- 
-  hs_stade_df |>
-  distinct(stade) |>
-  arrange(stade) |>
-  pull()
-names(list_stades) <- list_stades
-indicator_dict <- 
-  tribble(
-    ~type, ~indicator_name,
-    "trade_value_base100", "Value",
-    "trade_volume_base100", "Volume")
-filen <- paste0(
-  "t-stade--delta_ln_price_index--",
-  end_of_filenames)
-file <- here("data", "intermediary", filen)
-graph_df <- 
-  read_csv(file) |> 
-  as_tibble() |>
-  group_by(stade) |>
-  mutate(
-    trade_value_base100 = (v / v[t == first_year]) * 100,
-    trade_volume_base100 = trade_value_base100 / price_index) |>
-  ungroup()
-
-make_graph_stade <- function(stade_select){
-  label_data <-
-    graph_df |>
-    select(t, stade, starts_with("trade")) |>
-    pivot_longer(cols = starts_with("trade"), 
-                 names_to = "type", 
-                 values_to = "trade") |>
-    filter(stade == stade_select) |>
-    left_join(indicator_dict, by = "type") |>
-    group_by(indicator_name) |>
-    slice_max(order_by = t, n = 1) 
-  
-  graph <- 
-    graph_df |>
-    select(t, stade, starts_with("trade")) |>
-    pivot_longer(cols = starts_with("trade"), 
-                 names_to = "type", 
-                 values_to = "trade") |>
-    filter(stade == stade_select) |>
-    left_join(indicator_dict, by = "type") |>
-    ggplot(aes(x = t, y = trade, 
-               colour = indicator_name, shape = indicator_name)) +
-    geom_line() +
-    geom_point() +
-    geom_label_repel(aes(label = indicator_name), data = label_data) +
-    geom_hline(yintercept = 100) +
-    labs(
-      title = stade_select,
-      x = element_blank(),
-      y = paste0("Trade (100 = ", first_year, ")")
-    ) +
-    theme(
-      legend.position = "null"
-    )
-  return(graph)
-}
-
-list_graphs <-
-  map(list_stades, make_graph_stade)
-list_graphs[[2]]
-pdf(
-  file = here(
-    "output",
-    "figures",
-    glue("trade_by_stade_over_time__cepii_nomenclature.pdf")),
-  width = 7, height = 5, onefile = TRUE
-)
-walk(
-  1:length(list_stades),
-  \(i) plot(list_graphs[[i]])
-)
-dev.off()
+# * Plot graphs -----------------------------------------------------------
 
 #  All manuf products -----------------------------------------------------
 
-aggregation_level <- "t"
-graph_df <-
-  pmap(list_methods, open_csv) |>
-  list_rbind() |>
-  left_join(dict_method_names,
-            by = c("source_data", 
-                   "sector_classification",
-                   "lb_percentile_filter", 
-                   "ub_percentile_filter", 
-                   "weighted",
-                   "replace_by_centiles",
-                   "infer_missing_uv_before",
-                   "infer_missing_uv_after")) |>
-  group_by(method_name) |>
-  mutate(
-    price_index = price_index * 100,
-    trade_value_base100 = (v / v[t == first_year]) * 100,
-    trade_volume_base100 = trade_value_base100 / price_index * 100) |>
-  ungroup() |>
-  rename(trade_value = v) |> 
-  relocate(trade_value, delta_ln_price_index, price_index, .after = last_col()) |>
-  relocate(trade_value_base100, trade_volume_base100, .after = last_col())
-filen <- paste0("t--price_indices_all_methods--cepii_nomenclature.csv")
-file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
-write_csv(graph_df, file)
-
-# By isic -----------------------------------------------------------------
-
 list_methods <- 
-  list_arguments |>
-  filter(source_data != "both" & weighted == TRUE & lb_percentile_filter == 0.05) |>
+  tribble(
+    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_by_centiles, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data,
+    0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "baci",
+    0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "baci",
+    0.075                , 0.925                , TRUE     , FALSE               , FALSE                   , FALSE                  , "baci",
+    0.075                , 0.925                , FALSE    , FALSE               , FALSE                   , FALSE                  , "baci",
+    0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "wtfc",
+    0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "wtfc",
+    0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "both_aggregate",
+    0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "both_aggregate"
+  )
+list_methods <-
+  list_methods |>
+  filter(weighted == TRUE & lb_percentile_filter == 0.05) |>
   mutate(sector_classification = "cepii")
 dict_method_names <- 
   list_methods |>
-  mutate(method_name = case_when( 
-    source_data == "wtfc" ~ "WTFC 5% weighted",
-    source_data == "baci" ~ "BACI 5% weighted"))
+  mutate(method_name = case_when(
+    source_data == "baci" ~ "baci 5 % weighted",
+    source_data == "wtfc" ~ "wtfc 5 % weighted",
+    source_data == "both_aggregated" ~ "both 5 % weighted",
+    .default = NA_character_
+  ))
+
 open_csv <- 
   function(source_data, 
            sector_classification,
@@ -304,6 +174,44 @@ open_csv <-
              infer_missing_uv_after = infer_missing_uv_after) 
     return(df)
   }
+aggregation_level <- "t"
+graph_df <-
+  pmap(list_methods, open_csv) |>
+  list_rbind() |>
+  left_join(dict_method_names,
+            by = c("source_data", 
+                   "sector_classification",
+                   "lb_percentile_filter", 
+                   "ub_percentile_filter", 
+                   "weighted",
+                   "replace_by_centiles",
+                   "infer_missing_uv_before",
+                   "infer_missing_uv_after")) |>
+  group_by(method_name) |>
+  mutate(
+    price_index = price_index * 100,
+    trade_value_base100 = (v / v[t == first_year]) * 100,
+    trade_volume_base100 = trade_value_base100 / price_index * 100) |>
+  ungroup() |>
+  rename(trade_value = v) |> 
+  relocate(trade_value, delta_ln_price_index, price_index, .after = last_col()) |>
+  relocate(trade_value_base100, trade_volume_base100, .after = last_col())
+filen <- paste0("t--price_indices_all_methods--cepii_nomenclature.csv")
+file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
+write_csv(graph_df, file)
+
+# By isic -----------------------------------------------------------------
+
+# list_methods <- 
+#   list_arguments |>
+#   filter(source_data != "both" & weighted == TRUE & lb_percentile_filter == 0.05) |>
+#   mutate(sector_classification = "cepii")
+# dict_method_names <- 
+#   list_methods |>
+#   mutate(method_name = case_when( 
+#     source_data == "wtfc" ~ "WTFC 5% weighted",
+#     source_data == "baci" ~ "BACI 5% weighted"))
+
 
 aggregation_level <- "t-isic_2d"
 graph_df <-
@@ -370,24 +278,24 @@ filen <- paste0("t-stade--price_indices_all_methods--cepii_nomenclature.csv")
 file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
 write_csv(graph_df, file)
 
-list_method_names <- 
-  dict_method_names |>
-  distinct(method_name) |>
-  pull()
-list_graphs <-
-  map(list_method_names, make_graph_trade_volume_all_stades)
-pdf(
-  file = here(
-    "output", "figures",
-    glue("trade_volume_over_time__by_stade__different_methodologies__cepii_nomenclature.pdf")
-  ),
-  width = 7, height = 5, onefile = TRUE
-)
-walk(
-  1:length(list_method_names),
-  \(i) plot(list_graphs[[i]])
-)
-dev.off()
+# list_method_names <- 
+#   dict_method_names |>
+#   distinct(method_name) |>
+#   pull()
+# list_graphs <-
+#   map(list_method_names, make_graph_trade_volume_all_stades)
+# pdf(
+#   file = here(
+#     "output", "figures",
+#     glue("trade_volume_over_time__by_stade__different_methodologies__cepii_nomenclature.pdf")
+#   ),
+#   width = 7, height = 5, onefile = TRUE
+# )
+# walk(
+#   1:length(list_method_names),
+#   \(i) plot(list_graphs[[i]])
+# )
+# dev.off()
 
 # By ISIC x stade -------------------------------------------------------
 
