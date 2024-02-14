@@ -34,41 +34,43 @@ dict_method_names <-
 
 # * Over time -------------------------------------------------------------
 
-open_csv <- 
-  function(source_data, 
-           sector_classification,
-           lb_percentile_filter, 
-           ub_percentile_filter, 
-           weighted, 
-           replace_outliers, 
-           infer_missing_uv_before, 
-           infer_missing_uv_after) {
-    filen <- paste0(
-      aggregation_level, "--delta_ln_price_index--", 
-      "HS_", versions$HS,
-      "-source_data_", source_data, 
-      "-sectors_", sector_classification, 
-      "-lb_perc_", lb_percentile_filter, 
-      "-ub_perc_", ub_percentile_filter,
-      "-weighted_", as.character(as.numeric(weighted)),
-      "-replace_outliers_", as.character(as.numeric(replace_outliers)), 
-      "-infer_missing_uv_before_", as.character(as.numeric(infer_missing_uv_before)), 
-      "-infer_missing_uv_after_", as.character(as.numeric(infer_missing_uv_after)), 
-      ".csv")
-    file <- here("data", "intermediary", filen)
-    if (file.exists(file)){
-      df <- 
-        read_csv(file) |>
-        as_tibble() |>
-        mutate(source_data = source_data, 
-               sector_classification = sector_classification, 
-               lb_percentile_filter = lb_percentile_filter,
-               ub_percentile_filter = ub_percentile_filter,
-               weighted = weighted,
-               replace_outliers = replace_outliers,
-               infer_missing_uv_before = infer_missing_uv_before,
-               infer_missing_uv_after = infer_missing_uv_after) 
-      return(df)
+open_csv <- function(
+    source_data, 
+    sector_classification,
+    lb_percentile_filter, 
+    ub_percentile_filter, 
+    weighted, 
+    replace_outliers, 
+    infer_missing_uv_before, 
+    infer_missing_uv_after){
+  
+  filen <- paste0(
+    aggregation_level, "--delta_ln_price_index--", 
+    "HS_", versions$HS,
+    "-source_data_", source_data, 
+    "-sectors_", sector_classification, 
+    "-lb_perc_", lb_percentile_filter, 
+    "-ub_perc_", ub_percentile_filter,
+    "-weighted_", as.character(as.numeric(weighted)),
+    "-replace_outliers_", as.character(as.numeric(replace_outliers)), 
+    "-infer_uv_before_", as.character(as.numeric(infer_missing_uv_before)), 
+    "-infer_uv_after_", as.character(as.numeric(infer_missing_uv_after)), 
+    ".csv")
+  file <- here("data", "intermediary", versions$trade_price_V, filen)
+  
+  if (file.exists(file)){
+    df <- 
+      read_csv(file, show_col_types = FALSE) |>
+      as_tibble() |>
+      mutate(source_data = source_data, 
+             sector_classification = sector_classification, 
+             lb_percentile_filter = lb_percentile_filter,
+             ub_percentile_filter = ub_percentile_filter,
+             weighted = weighted,
+             replace_outliers = replace_outliers,
+             infer_missing_uv_before = infer_missing_uv_before,
+             infer_missing_uv_after = infer_missing_uv_after) 
+    return(df)
     }
   }
 
@@ -167,10 +169,7 @@ ggsave(
   width = 7, height = 5
 ) 
 
-
 # * By manuf over time ----------------------------------------------------
-
-
 
 aggregation_level <- "t-manuf"
 graph_df <-
@@ -195,9 +194,12 @@ graph_df <-
   rename(trade_value = v) |> 
   relocate(trade_value, delta_ln_price_index, price_index, .after = last_col()) |>
   relocate(trade_value_base100, trade_volume_base100, .after = last_col())
-filen <- paste0("t-manuf--price_indices_all_methods.csv")
-file <- here("data", "final", versions$trade_price_V, "all_methods", filen)
-write_csv(graph_df, file)
+
+write_csv(
+  graph_df, 
+  here("data", "final", versions$trade_price_V, "all_methods", 
+       paste0("t-manuf--price_indices_all_methods.csv"))
+  )
 
 # * By stade over time ----------------------------------------------------
 
@@ -213,9 +215,8 @@ indicator_dict <-
   tribble(
     ~type, ~indicator_name,
     "trade_value_base100", "Value",
-    "trade_volume_base100", "Volume")
-
-
+    "trade_volume_base100", "Volume"
+    )
 
 aggregation_level <- "t-stade"
 graph_df <-
@@ -246,10 +247,10 @@ write_csv(
        paste0("t-stade--price_indices_all_methods.csv"))
   )
 
-plot_stade_trade_over_time <- 
-  function(
+plot_stade_trade_over_time <- function(
     stade_select,
     method_select){
+  
   label_data <-
     graph_df |>
     filter(source_data != "wtfc") |>
@@ -312,7 +313,6 @@ walk(
 )
 dev.off()
   
-
 make_graph_trade_volume_all_stades <- function(method_name_select){
   label_data <- 
     graph_df |>

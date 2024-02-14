@@ -10,6 +10,23 @@ raw_baci_with_group_variables <-
   mutate(across(c(t_manuf, t_isic, t_stade, t_isic_stade),
                 ~ as.character(.x)))
 
+tmp <- 
+  raw_baci_with_group_variables |>
+  distinct(t)
+
+nb_missing_v <- 
+  raw_baci_with_group_variables |>
+  filter(is.na(v)) |>
+  nrow()
+
+nb_missing_l_v <- 
+  raw_baci_with_group_variables |>
+  filter(is.na(l_v)) |>
+  nrow()
+
+if (nb_missing_v != 0) stop("Missing v")
+
+
 # Remove outliers  --------------------------------------------------------
 
 list_arguments <- 
@@ -37,13 +54,23 @@ list_arguments <-
     lb_percentile_filter == 0.05,
     ub_percentile_filter == 0.95,
     weighted == TRUE,
-    replace_outliers == FALSE,
+    replace_by_centiles == FALSE,
     infer_missing_uv_before == FALSE,
     infer_missing_uv_after == FALSE
   )
 
 pwalk(list_arguments, prepare_data_for_price_indices)
 
+# * Create df with group variables ----------------------------------------
+
+# Compute price index -----------------------------------------------------
+
+pwalk(list_arguments, save_csv_files_price_index)
+
+sector_classification <- "isic"
+create_both_aggregated_series(sector_classification)
+
+# t--delta_ln_price_index--HS_1-source_data_wtfc-sectors_isic-lb_perc_0.05-ub_perc_0.95-weighted_1-replace_outliers_0-infer_uv_before_0-infer_uv_after_0
 # sector_classification <- "isic"
 # source_data <- "both"
 # lb_percentile_filter <- 0.05
@@ -66,14 +93,5 @@ pwalk(list_arguments, prepare_data_for_price_indices)
 # tmp <- df |>
 #   distinct(t)
 
-# * Create df with group variables ----------------------------------------
 
 
-
-# Compute price index -----------------------------------------------------
-
-pwalk(list_arguments, save_csv_files_price_index)
-
-
-sector_classification <- "isic"
-create_both_aggregated_series(sector_classification)

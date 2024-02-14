@@ -25,7 +25,6 @@ end_of_filenames <- paste0(
 
 # * Year level ------------------------------------------------------------
 
-
 aggregate_data <- 
   here("data", "intermediary", 
        paste0("t--delta_ln_price_index--", end_of_filenames)) |>

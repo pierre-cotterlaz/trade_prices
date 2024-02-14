@@ -73,9 +73,14 @@ hs_stade_df <-
   )) |>
   replace_na(list(share = 1)) |>
   arrange(k)
-filen <- paste0("HS", versions$HS, "-stade--share.csv")
-file <- here("data", "nomenclatures", filen)
-write_csv(hs_stade_df, file)
+
+
+write_csv(
+  hs_stade_df,
+  here(
+    "data", "nomenclatures", 
+    paste0("HS", versions$HS, "-stade--share.csv"))
+  )
 rm(list_k_in_baci)
 
 
@@ -85,7 +90,8 @@ rm(list_k_in_baci)
 hs_isic_df <-
   file.path(
     paths$nomenclatures_p, "conversions", 
-    paste0("HS", versions$HS, "-CPA2_1--share.csv")) |>
+    paste0("HS", versions$HS, "-CPA2_1--share.csv")
+    ) |>
   read_csv() |>
   as_tibble() |>
   mutate(isic_2d = substr(CPA2_1, 0, 2)) |>
@@ -183,7 +189,8 @@ nb_obs_per_isic_2d <-
   filter(!is.na(v) & !is.na(uv)) |>
   summarize(
     .by = c(t, i, j, k_4d), 
-    uv_hs4d = weighted.mean(uv, v, na.rm = TRUE)) 
+    uv_hs4d = weighted.mean(uv, v, na.rm = TRUE)
+    ) 
 
 write_fst(
   `tijk_4d--uv`, 
@@ -285,16 +292,13 @@ raw_baci_with_group_variables  <-
   ) 
 write_fst(
   raw_baci_with_group_variables, 
-  here("data", "intermediary", 
-       paste0("t-i-j-k--BACI_with_group_variables--HS", versions$HS, 
-              "-V", versions$baci_V, "-cepii_nomenclature.fst")), 
+  here(
+    "data", "intermediary", 
+    paste0("t-i-j-k--BACI_with_group_variables--HS", versions$HS, 
+           "-V", versions$baci_V, "-cepii_nomenclature.fst")
+    ), 
   compress = 100
   )
-
-tmp <- 
-  raw_baci_with_group_variables |>
-  distinct(isic_2d_aggregated)
-
 
 # delta_ln_uv computed at much aggregated levels 
 
