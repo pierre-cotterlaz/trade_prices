@@ -77,6 +77,11 @@ hs_isic_for_prices <-
   hs_branch_for_prices |>
   rename(isic_2d_aggregated = branch_for_price)
 
+k__manuf <- 
+  hs_isic_for_prices |>
+  summarize(.by = k,
+            manuf = max(manuf, na.rm = TRUE))
+
 list_arguments <- 
   tribble(
     ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_by_centiles, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data,
@@ -89,11 +94,23 @@ list_arguments <-
     0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "both",
     0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "both"
   )
-
 list_arguments <- 
   list_arguments |>
   filter(source_data != "both" & weighted == TRUE & lb_percentile_filter == 0.05) |>
   mutate(sector_classification = "cepii")
+
+list_arguments <-
+  expand.grid(
+    lb_percentile_filter = 0.05,
+    ub_percentile_filter = 0.95,
+    weighted = TRUE,
+    replace_by_centiles = FALSE,
+    infer_missing_uv_before = FALSE, 
+    infer_missing_uv_after = FALSE,
+    source_data = c("baci", "wtfc"),
+    remove_primary_goods = c(TRUE, FALSE),
+    sector_classification = "cepii"
+  )
 
 # pwalk(list_arguments, remove_outliers)
 
@@ -113,36 +130,127 @@ pwalk(list_arguments, save_csv_files_price_index)
 # * Create "both aggregated" series ---------------------------------------
 
 sector_classification <- "cepii"
-create_both_aggregated_series(sector_classification)
+create_both_aggregated_series(sector_classification, remove_primary_goods = TRUE)
+create_both_aggregated_series(
+  sector_classification,
+  remove_primary_goods = FALSE)
 
 # * Plot graphs -----------------------------------------------------------
 
 #  All manuf products -----------------------------------------------------
 
-list_methods <- 
-  tribble(
-    ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_by_centiles, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data,
-    0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "baci",
-    0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "baci",
-    0.075                , 0.925                , TRUE     , FALSE               , FALSE                   , FALSE                  , "baci",
-    0.075                , 0.925                , FALSE    , FALSE               , FALSE                   , FALSE                  , "baci",
-    0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "wtfc",
-    0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "wtfc",
-    0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "both_aggregate",
-    0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "both_aggregate"
-  )
+# list_methods <- 
+#   tribble(
+#     ~lb_percentile_filter, ~ub_percentile_filter, ~weighted, ~replace_by_centiles, ~infer_missing_uv_before, ~infer_missing_uv_after, ~source_data,
+#     0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "baci",
+#     0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "baci",
+#     0.075                , 0.925                , TRUE     , FALSE               , FALSE                   , FALSE                  , "baci",
+#     0.075                , 0.925                , FALSE    , FALSE               , FALSE                   , FALSE                  , "baci",
+#     0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "wtfc",
+#     0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "wtfc",
+#     0.05                 , 0.95                 , TRUE     , FALSE               , FALSE                   , FALSE                  , "both_aggregate",
+#     0.05                 , 0.95                 , FALSE    , FALSE               , FALSE                   , FALSE                  , "both_aggregate"
+#   )
+# list_methods <-
+#   list_methods |>
+#   filter(weighted == TRUE & lb_percentile_filter == 0.05) |>
+#   mutate(sector_classification = "cepii")
+
 list_methods <-
-  list_methods |>
-  filter(weighted == TRUE & lb_percentile_filter == 0.05) |>
-  mutate(sector_classification = "cepii")
+  expand_grid(
+    lb_percentile_filter = 0.05,
+    ub_percentile_filter = 0.95,
+    weighted = TRUE,
+    replace_by_centiles = FALSE,
+    infer_missing_uv_before = FALSE, 
+    infer_missing_uv_after = FALSE,
+    source_data = c("baci", "wtfc", "both_aggregate"),
+    remove_primary_goods = c(TRUE, FALSE),
+    sector_classification = "cepii"
+  )
+
 dict_method_names <- 
   list_methods |>
   mutate(method_name = case_when(
-    source_data == "baci" ~ "baci 5 % weighted",
-    source_data == "wtfc" ~ "wtfc 5 % weighted",
-    source_data == "both_aggregated" ~ "both 5 % weighted",
+    source_data == "baci" & remove_primary_goods == FALSE ~ "baci",
+    source_data == "wtfc" & remove_primary_goods == FALSE ~ "wtfc",
+    source_data == "both_aggregate" & remove_primary_goods == FALSE ~ "both",
+    source_data == "baci" & remove_primary_goods == TRUE ~ "baci, manuf",
+    source_data == "wtfc" & remove_primary_goods == TRUE ~ "wtfc, manuf",
+    source_data == "both_aggregate" & remove_primary_goods == TRUE ~ "both, manuf",
     .default = NA_character_
   ))
+
+open_csv_new <- function(
+    source_data, 
+    sector_classification,
+    lb_percentile_filter, 
+    ub_percentile_filter, 
+    weighted, 
+    replace_by_centiles, 
+    infer_missing_uv_before, 
+    infer_missing_uv_after,
+    remove_primary_goods) {
+  
+  filename <- 
+    paste0(
+      "price_index--", 
+      "HS_", versions$HS,
+      "-source_data_", source_data, 
+      "-sectors_", sector_classification, 
+      "-lb_perc_", lb_percentile_filter, 
+      "-ub_perc_", ub_percentile_filter,
+      "-weighted_", as.character(as.numeric(weighted)),
+      "-replace_outliers_", as.character(as.numeric(replace_by_centiles)), 
+      "-infer_uv_before_", as.character(as.numeric(infer_missing_uv_before)), 
+      "-infer_uv_after_", as.character(as.numeric(infer_missing_uv_after)), 
+      "-remove_primary_", as.character(as.numeric(remove_primary_goods)),
+      ".csv"
+    )
+  
+  df <- 
+    here("data", "intermediary", versions$trade_price_V, filename) |>
+    read_csv(show_col_types = FALSE) |>
+    as_tibble() |>
+    mutate(
+      source_data = source_data, 
+      sector_classification = sector_classification, 
+      lb_percentile_filter = lb_percentile_filter,
+      ub_percentile_filter = ub_percentile_filter,
+      weighted = weighted,
+      replace_by_centiles = replace_by_centiles,
+      infer_missing_uv_before = infer_missing_uv_before,
+      infer_missing_uv_after = infer_missing_uv_after,
+      remove_primary_goods = remove_primary_goods
+    ) 
+  
+  return(df)
+  
+}
+
+graph_df <-
+  pmap(list_methods, open_csv_new) |>
+  list_rbind() |>
+  left_join(dict_method_names,
+            by = c("source_data", 
+                   "sector_classification",
+                   "lb_percentile_filter", 
+                   "ub_percentile_filter", 
+                   "weighted",
+                   "replace_by_centiles",
+                   "infer_missing_uv_before",
+                   "infer_missing_uv_after",
+                   "remove_primary_goods")) |>
+  filter(aggregation_level == "year") |>
+  mutate(
+    .by = method_name,
+    price_index = price_index * 100,
+    trade_value_base100 = (v / v[t == first_year]) * 100,
+    trade_volume_base100 = trade_value_base100 / price_index * 100) |>
+  rename(trade_value = v) |> 
+  select(-c(manuf, stade, isic)) |>
+  relocate(trade_value, delta_ln_price_index, price_index, .after = last_col()) |>
+  relocate(trade_value_base100, trade_volume_base100, .after = last_col())
 
 open_csv <- function(
     source_data, 
