@@ -463,11 +463,6 @@ save_csv_files_price_index <- function(
       mutate(cumul_delta_ln_price_index = cumsum(delta_ln_price_index)) |>
       mutate(price_index = exp(cumul_delta_ln_price_index)) |>
       mutate(aggregation_level = "year")
-    # write_csv(
-    #   t_price_index_df, 
-    #   here("data", "intermediary", versions$trade_price_V, 
-    #        paste0("t--delta_ln_price_index--", end_of_filenames))
-    #   )
     
     t_manuf_price_index_df <- 
       compute_price_index(
@@ -488,11 +483,6 @@ save_csv_files_price_index <- function(
       select(-cumul_delta_ln_price_index) |>
       mutate(t = as.numeric(t)) |>
       mutate(aggregation_level = "year x manuf")
-    # write_csv(
-    #   t_manuf_price_index_df, 
-    #   here("data", "intermediary", versions$trade_price_V,
-    #        paste0("t-manuf--delta_ln_price_index--", end_of_filenames))
-    #   )
     
     # message("Computing year x production_stage price index")
     # By t-stade
@@ -515,12 +505,6 @@ save_csv_files_price_index <- function(
       select(-cumul_delta_ln_price_index) |>
       mutate(t = as.numeric(t)) |>
       mutate(aggregation_level = "year x stade")
-    # write_csv(
-    #   t_stade_price_index_df, 
-    #   here("data", "intermediary", versions$trade_price_V, 
-    #        paste0("t-stade--delta_ln_price_index--", end_of_filenames)
-    #     )
-    #   )
     
     # By t-ISIC
     t_isic2d_price_index_df <- 
@@ -542,12 +526,12 @@ save_csv_files_price_index <- function(
       select(-cumul_delta_ln_price_index) |>
       mutate(t = as.numeric(t)) |>
       mutate(aggregation_level = "year x sector")
-    write_csv(
-      t_isic2d_price_index_df, 
-      here("data", "intermediary", versions$trade_price_V, 
-           paste0("t-isic_2d--delta_ln_price_index--", end_of_filenames)
-           )
-      )
+    # write_csv(
+    #   t_isic2d_price_index_df, 
+    #   here("data", "intermediary", versions$trade_price_V, 
+    #        paste0("t-isic_2d--delta_ln_price_index--", end_of_filenames)
+    #        )
+    #   )
     
     # By t-ISIC-stade
     t_isic2d_stade_price_index_df <- 
@@ -569,12 +553,7 @@ save_csv_files_price_index <- function(
       select(-cumul_delta_ln_price_index) |>
       mutate(t = as.numeric(t)) |>
       mutate(aggregation_level = "year x sector x stade")
-    # write_csv(
-    #   t_isic2d_stade_price_index_df, 
-    #   here("data", "intermediary", versions$trade_price_V,  
-    #        paste0("t-isic_2d-stade--delta_ln_price_index--", end_of_filenames))
-    #   )
-    
+
     df <- 
       bind_rows(
         t_price_index_df,
@@ -583,6 +562,7 @@ save_csv_files_price_index <- function(
         t_isic2d_price_index_df,
         t_isic2d_stade_price_index_df
       )
+    
     write_csv(
       df,
       here("data", "intermediary", versions$trade_price_V,
@@ -590,6 +570,8 @@ save_csv_files_price_index <- function(
       )
 }
 
+# sector_classification <- "cepii"
+# remove_primary_goods <- TRUE
 create_both_aggregated_series <- function(
     sector_classification,
     remove_primary_goods){
@@ -640,9 +622,18 @@ create_both_aggregated_series <- function(
   
   df <-
     bind_rows(wtfc_prices, baci_prices) |>
-    select(t, nb_obs_used_for_price_index, delta_ln_price_index, v) |>
-    arrange(t) |>
-    mutate(cumul_delta_ln_price_index = cumsum(delta_ln_price_index)) |>
+    filter(aggregation_level != "year x manuf") |>
+    mutate(group_id = case_when(
+      aggregation_level == "year" ~ "all",
+      aggregation_level == "year x stade" ~ stade,
+      aggregation_level == "year x sector" ~ isic,
+      aggregation_level == "year x sector x stade" ~ paste(isic, stade)
+    )) |>
+    select(aggregation_level, t, stade, isic, group_id, 
+           nb_obs_used_for_price_index, delta_ln_price_index, v) |>
+    arrange(group_id, t) |>
+    mutate(.by = group_id,
+           cumul_delta_ln_price_index = cumsum(delta_ln_price_index)) |>
     mutate(price_index = exp(cumul_delta_ln_price_index)) 
   write_csv(
     df,
